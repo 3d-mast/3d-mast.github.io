@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Ламповая pixel-art энциклопедия пластиков для FDM 3D-печати: температуры, свойства, сушка, поддерживающие материалы и практические советы." />
+  <meta name="theme-color" content="#17141f" />
+  <title>3D Пластики — Pixel Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="3D Пластики — на главную">
+      <span class="brand-spool" aria-hidden="true"></span>
+      <span><b>3D</b> Пластики</span>
+    </a>
+    <button class="menu-toggle" type="button" aria-label="Открыть меню" aria-expanded="false">☰</button>
+    <nav class="nav" aria-label="Главная навигация">
+      <a href="#catalog">Материалы</a>
+      <a href="#support">Поддержки</a>
+      <a href="#tips">Лайфхаки</a>
+      <a href="#picker">Выбор</a>
+      <button class="sound-toggle" type="button" title="Переключить звуки интерфейса" aria-pressed="false">♪</button>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero shell">
+      <div class="hero-copy">
+        <div class="eyebrow">PIXEL MATERIAL DATABASE // v1.0</div>
+        <h1>Энциклопедия<br><span>3D-пластиков</span></h1>
+        <p>Температуры, свойства, сушка, назначение и совместимость материалов для интерфейсных слоёв поддержек.</p>
+        <div class="hero-actions">
+          <a class="pixel-btn primary" href="#catalog">Открыть каталог</a>
+          <a class="pixel-btn ghost" href="#support">Подобрать поддержку</a>
+        </div>
+        <div class="hero-badges">
+          <span><b id="materialCount">0</b> материалов</span>
+          <span><b>10</b> семейств</span>
+          <span><b>100%</b> по делу</span>
+        </div>
+      </div>
+
+      <div class="workshop" aria-label="Пиксельная мастерская с 3D-принтером">
+        <div class="wall-dots"></div>
+        <div class="shelf">
+          <span class="mini-spool c1"></span><span class="mini-spool c2"></span><span class="mini-spool c3"></span><span class="mini-spool c4"></span>
+        </div>
+        <div class="poster">MAKE<br>PRINTS<br><em>NOT WAR</em></div>
+        <div class="printer">
+          <div class="printer-top"></div>
+          <div class="rail"><span class="head"></span></div>
+          <div class="print-bed"><span class="benchy"></span></div>
+          <div class="printer-base"><span>READY</span></div>
+        </div>
+        <div class="plant"><i></i><i></i><i></i><b></b></div>
+        <div class="mug">♥</div>
+      </div>
+    </section>
+
+    <section class="ticker" aria-label="Быстрые рекомендации">
+      <div class="ticker-track">
+        <span>PLA — старт без боли</span><span>PETG — универсальный работяга</span><span>ASA — улица и солнце</span><span>TPU — гибкость</span><span>PA/PC — нагрузка</span><span>PEEK — промышленный босс</span>
+      </div>
+    </section>
+
+    <section id="catalog" class="section shell">
+      <div class="section-head">
+        <div>
+          <span class="section-kicker">01 // БАЗА МАТЕРИАЛОВ</span>
+          <h2>Каталог пластиков</h2>
+          <p>Ищи по названию, фильтруй по семейству и открывай карточку с подробностями.</p>
+        </div>
+        <div class="counter-panel"><span id="visibleCount">0</span><small>найдено</small></div>
+      </div>
+
+      <div class="toolbar pixel-panel">
+        <label class="search-box">
+          <span>⌕</span>
+          <input id="searchInput" type="search" placeholder="Например: PETG, nylon, гибкий…" autocomplete="off" />
+        </label>
+        <select id="familyFilter" aria-label="Фильтр по семейству">
+          <option value="all">Все семейства</option>
+        </select>
+        <select id="difficultyFilter" aria-label="Фильтр по сложности">
+          <option value="all">Любая сложность</option>
+          <option value="1">Просто</option>
+          <option value="2">Средне</option>
+          <option value="3">Сложно</option>
+          <option value="4">Промышленно</option>
+        </select>
+        <button id="resetFilters" class="small-btn" type="button">Сбросить</button>
+      </div>
+
+      <div id="familyChips" class="chips" aria-label="Быстрые фильтры"></div>
+      <div id="materialsGrid" class="materials-grid"></div>
+      <div id="emptyState" class="empty-state" hidden>
+        <div class="empty-icon">?</div>
+        <h3>Ничего не найдено</h3>
+        <p>Сбрось фильтры — пластик никуда не делся.</p>
+      </div>
+    </section>
+
+    <section class="section shell compare-section">
+      <div class="section-head compact">
+        <div>
+          <span class="section-kicker">02 // СРАВНЕНИЕ</span>
+          <h2>Сравнить материалы</h2>
+          <p>Добавь до трёх материалов кнопкой «Сравнить» в карточках.</p>
+        </div>
+        <button id="clearCompare" class="small-btn danger" type="button">Очистить</button>
+      </div>
+      <div id="compareTray" class="compare-tray pixel-panel">
+        <div class="compare-placeholder">Пока пусто. Выбери материалы в каталоге.</div>
+      </div>
+    </section>
+
+    <section id="support" class="section support-zone">
+      <div class="shell">
+        <div class="section-head light">
+          <div>
+            <span class="section-kicker">03 // SUPPORT INTERFACE</span>
+            <h2>Связующий слой поддержек</h2>
+            <p>Другим пластиком обычно печатают только 2–4 контактных слоя. Тело поддержек оставляют из материала модели.</p>
+          </div>
+        </div>
+
+        <div class="support-layout">
+          <div class="support-picker pixel-panel light-panel">
+            <label for="modelMaterial">Материал модели</label>
+            <select id="modelMaterial"></select>
+            <div id="supportResult" class="support-result"></div>
+          </div>
+
+          <div class="support-rules">
+            <article class="rule-card good">
+              <span class="rule-icon">↔</span>
+              <div><b>PLA ↔ PETG</b><p>Дешёвая взаимная пара: сцепляются достаточно для печати, но легко разделяются после неё.</p></div>
+            </article>
+            <article class="rule-card water">
+              <span class="rule-icon">≈</span>
+              <div><b>PVA / BVOH</b><p>Растворимые поддержки. Сухое хранение обязательно, иначе получишь мокрую лапшу.</p></div>
+            </article>
+            <article class="rule-card hot">
+              <span class="rule-icon">▲</span>
+              <div><b>Высокие температуры</b><p>Для PC, PPS, PEI, PEEK и PEKK нужен специальный high-temp support.</p></div>
+            </article>
+          </div>
+        </div>
+
+        <div class="settings-strip">
+          <span><small>Interface layers</small><b>2–4</b></span>
+          <span><small>Top Z distance</small><b>0 мм</b></span>
+          <span><small>Prime tower</small><b>ВКЛ</b></span>
+          <span><small>Промывка</small><b>Повышенная</b></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="tips" class="section shell">
+      <div class="section-head">
+        <div>
+          <span class="section-kicker">04 // ПОЛЕВАЯ ПРАКТИКА</span>
+          <h2>Лайфхаки без шаманства</h2>
+          <p>Несколько правил, которые экономят пластик, время и нервные клетки.</p>
+        </div>
+      </div>
+      <div class="tips-grid">
+        <article class="tip-note blue"><span>💧</span><b>Суши гигроскопичные</b><p>PETG, TPU, PA, PC, PVA и BVOH заметно выигрывают от сушки.</p></article>
+        <article class="tip-note orange"><span>◆</span><b>CF/GF едят латунь</b><p>Используй закалённое, карбидное или рубиновое сопло.</p></article>
+        <article class="tip-note red"><span>▣</span><b>ABS/ASA — в камеру</b><p>Закрытый объём снижает трещины, усадку и отрыв углов.</p></article>
+        <article class="tip-note yellow"><span>♨</span><b>PLA боится жары</b><p>В машине летом деталь может размягчиться и поплыть.</p></article>
+        <article class="tip-note green"><span>✦</span><b>PETG любит чистоту</b><p>Налипший пластик на сопле превращается в чёрные сопли на модели.</p></article>
+        <article class="tip-note violet"><span>▤</span><b>Интерфейс — не весь support</b><p>Экономь дорогой материал: другим пластиком печатай только верхние слои.</p></article>
+        <article class="tip-note mint"><span>▱</span><b>PP печатай на PP</b><p>Клей, упаковочная лента или специальная поверхность решают адгезию.</p></article>
+        <article class="tip-note pink"><span>◎</span><b>Сначала башня температуры</b><p>Цифры на катушке — диапазон, а не священное писание.</p></article>
+      </div>
+    </section>
+
+    <section id="picker" class="section picker-zone">
+      <div class="shell">
+        <div class="section-head light">
+          <div>
+            <span class="section-kicker">05 // БЫСТРЫЙ ВЫБОР</span>
+            <h2>Что взять под задачу</h2>
+            <p>Выбери сценарий — получишь нормальную стартовую рекомендацию.</p>
+          </div>
+        </div>
+        <div class="quest-grid" id="questGrid"></div>
+        <div id="questResult" class="quest-result pixel-panel light-panel" aria-live="polite">
+          <span class="quest-avatar">?</span>
+          <div><small>Выбери задачу выше</small><h3>Материал появится здесь</h3><p>С кратким объяснением, почему именно он.</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="shell footer-inner">
+      <div>
+        <a class="brand footer-brand" href="#top"><span class="brand-spool"></span><span><b>3D</b> Пластики</span></a>
+        <p>Ламповая база материалов для практической FDM-печати.</p>
+      </div>
+      <div class="footer-center">
+        <span>Автор</span>
+        <b>Алексей Прокопчук</b>
+        <small>Сделано с ♥ и без маркетинговой лапши</small>
+      </div>
+      <div class="footer-links"><a href="#catalog">Каталог</a><a href="#support">Поддержки</a><a href="#tips">Лайфхаки</a></div>
+    </div>
+  </footer>
+
+  <dialog id="materialDialog" class="material-dialog">
+    <button class="dialog-close" type="button" aria-label="Закрыть">×</button>
+    <div id="dialogContent"></div>
+  </dialog>
+
+  <script src="materials.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
