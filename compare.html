@@ -1,0 +1,26 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#100a07"><meta name="description" content="Сравнение пластиков для 3D-печати по температурам, прочности, гибкости и сложности."><title>Сравнение пластиков — 3D Пластики</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="theme-v5.css?v=5.0.0"></head><body>
+<header class="site-header"><div class="shell header-inner"><a class="brand" href="index.html"><span class="brand-spool"></span><span><b>3D</b> Пластики</span></a><button class="menu-toggle" type="button" aria-label="Открыть меню" aria-expanded="false">☰</button><nav class="nav"><a href="index.html"><span>⌂</span> Главная</a><a href="materials.html"><span>▦</span> Каталог</a><a class="active" href="compare.html"><span>▥</span> Сравнение</a><a href="supports.html"><span>⇄</span> Поддержки</a><a href="guide.html"><span>✦</span> Практика</a><button class="sound-toggle" type="button" aria-pressed="false">♪</button></nav></div></header>
+<main class="page-main shell" id="top"><section class="page-hero pixel-frame"><div><div class="eyebrow">MATERIAL COMPARISON</div><h1>Сравнение</h1><p>Выбери три материала. Таблица обновится сразу и покажет ключевые отличия без лишних карточек вокруг.</p></div><div class="page-hero-icon">▥</div></section>
+<section class="compare-picker pixel-frame"><label>Материал 1<select class="select-control" data-compare-select></select></label><label>Материал 2<select class="select-control" data-compare-select></select></label><label>Материал 3<select class="select-control" data-compare-select></select></label></section>
+<section class="comparison-shell pixel-frame" id="comparisonOutput"></section>
+<section class="section"><div class="route-grid"><a class="route-card" href="materials.html" style="--accent:#2f817c"><span>▦</span><h3>Нужны подробности?</h3><p>Открой каталог и посмотри назначение, температуру сушки и рекомендации по поддержкам.</p><small>В КАТАЛОГ →</small></a><a class="route-card" href="supports.html" style="--accent:#397c87"><span>⇄</span><h3>Выбрать поддержку</h3><p>Проверь, какой материал использовать только для контактных слоёв.</p><small>ПОДОБРАТЬ →</small></a></div></section></main>
+<footer class="footer"><div class="shell footer-inner"><div class="footer-decor">▥ 🌿 🐈</div><div class="footer-center"><span>Автор</span><b>Алексей Прокопчук</b><small>© 2026. Все права защищены.</small></div><div class="footer-links"><a href="index.html">Главная</a><a href="materials.html">Каталог</a><a href="supports.html">Поддержки</a></div></div></footer><button class="back-to-top" type="button"><span>↑</span><small>TOP</small></button><script src="materials.js"></script><script src="common-v5.js?v=5.0.0"></script><script>
+(() => {
+  const selects=[...document.querySelectorAll('[data-compare-select]')];
+  const output=document.querySelector('#comparisonOutput');
+  const difficulty=value=>['','Просто','Средне','Сложно','Промышленно'][value]||'—';
+  const stars=value=>`<span class="rating">${'■'.repeat(value)}${'□'.repeat(5-value)}</span>`;
+  const params=new URLSearchParams(location.search);
+  const defaults=[params.get('m1')||'PLA',params.get('m2')||'PETG',params.get('m3')||'ASA'];
+  selects.forEach((select,index)=>{
+    MATERIALS.forEach(material=>select.add(new Option(material.name,material.name)));
+    select.value=MATERIALS.some(material=>material.name===defaults[index])?defaults[index]:MATERIALS[index]?.name;
+    select.addEventListener('change',render);
+  });
+  function render(){
+    const list=selects.map(select=>MATERIALS.find(material=>material.name===select.value)).filter(Boolean);
+    output.innerHTML=`<div class="comparison-table"><div class="comparison-labels"><b>Параметр</b><span>Сопло</span><span>Стол</span><span>Камера</span><span>Сушка</span><span>Прочность</span><span>Гибкость</span><span>Теплостойкость</span><span>Сложность</span><span>Support</span></div>${list.map(material=>`<div class="comparison-column" style="--accent:${material.color}"><strong>${material.name}</strong><span>${material.nozzle} °C</span><span>${material.bed} °C</span><span>${material.chamber}</span><span>${material.dry}</span><span>${stars(material.strength)}</span><span>${stars(material.flex)}</span><span>${stars(material.heat)}</span><span>${difficulty(material.difficulty)}</span><span>${material.support}</span></div>`).join('')}</div>`;
+  }
+  render();
+})();
+</script></body></html>
