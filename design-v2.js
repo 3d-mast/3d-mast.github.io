@@ -137,6 +137,19 @@
     }).observe(document.body, { childList: true, subtree: true });
   }
 
+  function loadWorkshopV3() {
+    const version = '3.0.1';
+    const components = document.createElement('link');
+    components.rel = 'stylesheet';
+    components.href = `design-v3-components.css?v=${version}`;
+    document.head.append(components);
+
+    const script = document.createElement('script');
+    script.src = `design-v3.js?v=${version}`;
+    script.async = false;
+    document.body.append(script);
+  }
+
   addProgress();
   addAmbientPixels();
   addHeroStatus();
@@ -144,4 +157,5 @@
   addWorkshopParallax();
   addRevealAnimations();
   protectWinampTitle();
+  loadWorkshopV3();
 })();
