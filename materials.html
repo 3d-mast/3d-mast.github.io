@@ -1,14 +1,66 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#100a07"><meta name="description" content="Каталог пластиков для FDM 3D-печати с фильтрами, температурами и подробными характеристиками."><title>Каталог пластиков — 3D Пластики</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="theme-v5.css?v=5.0.0"></head><body>
-<header class="site-header"><div class="shell header-inner"><a class="brand" href="index.html"><span class="brand-spool"></span><span><b>3D</b> Пластики</span></a><button class="menu-toggle" type="button" aria-label="Открыть меню" aria-expanded="false">☰</button><nav class="nav"><a href="index.html"><span>⌂</span> Главная</a><a class="active" href="materials.html"><span>▦</span> Каталог</a><a href="compare.html"><span>▥</span> Сравнение</a><a href="supports.html"><span>⇄</span> Поддержки</a><a href="guide.html"><span>✦</span> Практика</a><button class="sound-toggle" type="button" aria-pressed="false">♪</button></nav></div></header>
-<main class="page-main shell" id="top">
-<section class="page-hero pixel-frame"><div><div class="eyebrow">MATERIAL DATABASE</div><h1>Каталог пластиков</h1><p>Материалы подгружаются по 12 штук. Ищи по названию, назначению или совместимости и открывай подробную карточку.</p></div><div class="page-hero-icon">▦</div></section>
-<div class="toolbar"><label class="search-box"><span>⌕</span><input id="searchInput" type="search" placeholder="PETG, nylon, гибкий…"></label><select id="familyFilter"><option value="all">Все семейства</option></select><select id="difficultyFilter"><option value="all">Любая сложность</option><option value="1">Просто</option><option value="2">Средне</option><option value="3">Сложно</option><option value="4">Промышленно</option></select><button id="resetFilters" class="small-button" type="button">Сбросить</button></div>
-<div id="familyChips" class="filter-chips"></div>
-<div class="section-title"><span>★</span><h2>Найдено: <b id="visibleCount">0</b></h2><i></i></div>
-<div id="materialsGrid" class="material-grid"></div><div id="emptyState" class="empty-state pixel-frame" hidden>Ничего не найдено. Сбрось фильтры или измени запрос.</div>
-<div class="load-more-wrap"><button id="loadMore" class="pixel-button secondary load-more" type="button">Показать ещё 12</button></div>
-</main>
-<footer class="footer"><div class="shell footer-inner"><div class="footer-decor">▥ 🌿 🐈</div><div class="footer-center"><span>Автор</span><b>Алексей Прокопчук</b><small>© 2026. Все права защищены.</small></div><div class="footer-links"><a href="index.html">Главная</a><a href="supports.html">Поддержки</a><a href="compare.html">Сравнение</a></div></div></footer>
-<button class="back-to-top" type="button" aria-label="Вернуться наверх"><span>↑</span><small>TOP</small></button>
-<dialog id="materialDialog" class="modal"><button class="modal-close" type="button" aria-label="Закрыть">×</button><div id="dialogContent" class="modal-content"></div></dialog>
-<script src="materials.js"></script><script src="common-v5.js?v=5.0.0"></script><script src="catalog-v5.js?v=5.0.0"></script></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#100b07">
+  <meta name="description" content="Каталог пластиков для FDM 3D-печати с фильтрами, температурами и подробными характеристиками.">
+  <title>Каталог пластиков — 3D Пластики</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="pixel-v6.css?v=6.0.0">
+  <link rel="stylesheet" href="inner-v7.css?v=7.0.0">
+</head>
+<body>
+  <div class="pixel-noise" aria-hidden="true"></div>
+  <div class="site-shell">
+    <header class="top-panel pixel-frame">
+      <a class="logo" href="index.html"><span class="logo-spool"><i></i></span><b>3D Пластики</b></a>
+      <button class="menu-button" type="button" aria-expanded="false" aria-label="Открыть меню">☰</button>
+      <nav class="top-nav" aria-label="Главная навигация">
+        <a class="active-page" href="materials.html"><span>▦</span> Виды пластиков</a>
+        <a href="compare.html"><span>▥</span> Характеристики</a>
+        <a href="supports.html"><span>◆</span> Поддержки</a>
+        <a href="guide.html"><span>✦</span> Лайфхаки</a>
+        <a href="index.html#compatibility"><span>▤</span> Совместимость</a>
+      </nav>
+    </header>
+
+    <main class="inner-main" id="top">
+      <section class="inner-hero pixel-frame">
+        <div><p class="inner-kicker">MATERIAL DATABASE // 58+ FILAMENTS</p><h1>Каталог пластиков</h1><p>Ищи материал по названию, назначению и совместимости. Карточки загружаются порциями, чтобы каталог оставался быстрым и читаемым.</p></div>
+        <div class="inner-hero-icon">▦</div>
+      </section>
+
+      <div class="inner-toolbar">
+        <label class="inner-search"><span>⌕</span><input id="searchInput" type="search" placeholder="PETG, nylon, гибкий…" autocomplete="off"></label>
+        <select id="familyFilter" aria-label="Семейство материала"><option value="all">Все семейства</option></select>
+        <select id="difficultyFilter" aria-label="Сложность печати"><option value="all">Любая сложность</option><option value="1">Просто</option><option value="2">Средне</option><option value="3">Сложно</option><option value="4">Промышленно</option></select>
+        <button id="resetFilters" class="small-button" type="button">Сбросить</button>
+      </div>
+
+      <section class="inner-section dashboard-panel pixel-frame">
+        <div class="inner-heading"><span>★</span><h2>Материалы — <b id="visibleCount">0</b></h2><i></i></div>
+        <div id="familyChips" class="filter-chips" aria-label="Быстрые фильтры"></div>
+        <div id="materialsGrid" class="material-grid"></div>
+        <div id="emptyState" class="empty-state pixel-frame" hidden>Ничего не найдено. Сбрось фильтры или измени запрос.</div>
+        <div class="load-more-wrap"><button id="loadMore" class="pixel-button secondary load-more" type="button">Показать ещё 12</button></div>
+      </section>
+    </main>
+
+    <footer class="footer-panel inner-footer pixel-frame">
+      <div class="footer-decor">▥ 📚 🌿 🐈</div>
+      <div class="footer-author"><span>Автор:</span><b>Алексей Прокопчук</b><small>© 2026. Все права защищены.</small></div>
+      <div class="footer-links"><a href="index.html">Главная</a><a href="supports.html">Поддержки</a><a href="compare.html">Сравнение</a></div>
+      <div class="footer-cup">☕</div>
+    </footer>
+  </div>
+
+  <button class="back-to-top" type="button" aria-label="Вернуться наверх"><span>↑</span><small>TOP</small></button>
+  <dialog id="materialDialog" class="modal"><button class="modal-close" type="button" aria-label="Закрыть">×</button><div id="dialogContent" class="modal-content"></div></dialog>
+  <script src="materials.js"></script>
+  <script src="inner-v7.js?v=7.0.0"></script>
+  <script src="catalog-v5.js?v=5.1.0"></script>
+</body>
+</html>
