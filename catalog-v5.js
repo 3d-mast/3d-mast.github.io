@@ -1,5 +1,7 @@
 (() => {
-  const state = { family: 'all', difficulty: 'all', query: '', limit: 12 };
+  const params = new URLSearchParams(location.search);
+  const initialQuery = (params.get('q') || '').trim().toLowerCase();
+  const state = { family: 'all', difficulty: 'all', query: initialQuery, limit: 12 };
   const grid = document.querySelector('#materialsGrid');
   const familySelect = document.querySelector('#familyFilter');
   const difficultySelect = document.querySelector('#difficultyFilter');
@@ -81,7 +83,9 @@
   document.querySelector('.modal-close').addEventListener('click',()=>dialog.close());
   dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close()});
 
-  fillFilters(); render();
-  const requested=new URLSearchParams(location.search).get('material');
+  fillFilters();
+  search.value=params.get('q') || '';
+  render();
+  const requested=params.get('material');
   if(requested&&find(requested))setTimeout(()=>openDetails(requested),60);
 })();
