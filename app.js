@@ -198,13 +198,22 @@ function setFamily(name) {
   renderMaterials();
 }
 
+function addCopyrightNotice() {
+  const container = document.querySelector('.footer-center');
+  if (!container || container.querySelector('.copyright')) return;
+  const notice = document.createElement('small');
+  notice.className = 'copyright';
+  notice.textContent = '© 2026 Алексей Прокопчук. Все права защищены.';
+  container.append(notice);
+}
+
 function init() {
   fillFilters();
   MATERIALS.filter(m => m.family !== 'Поддержки').forEach(m => {
     const option=document.createElement('option'); option.value=m.name; option.textContent=m.name; els.modelMaterial.append(option);
   });
   els.modelMaterial.value='PETG';
-  renderMaterials(); renderCompare(); updateSupport(); renderQuests(); bindEvents();
+  renderMaterials(); renderCompare(); updateSupport(); renderQuests(); bindEvents(); addCopyrightNotice();
 }
 
 init();
