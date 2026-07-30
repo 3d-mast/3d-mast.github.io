@@ -166,7 +166,7 @@
       <section class="egg-player" role="dialog" aria-modal="true" aria-label="Filament Amp">
         <header><b>FILAMENT AMP</b><button data-egg-close aria-label="Закрыть">×</button></header>
         <div class="egg-player-display"><span>01. PRINTING_GOOD.MP3</span><small>128 KBPS · 44 KHZ · STEREO</small></div>
-        <div class="egg-equalizer" aria-hidden="true">${Array.from({ length: 18 }, (_, i) => `<i style="--i:${i}"></i>`).join('')}</div>
+        <div class="egg-equalizer" aria-hidden="true">${Array.from({ length: 18 }, (_, i) => `<i style="--i:${i};height:${20 + (i % 6) * 12}%"></i>`).join('')}</div>
         <div class="egg-player-controls"><button>◀◀</button><button>▶</button><button>▮▮</button><button>■</button><button>▶▶</button></div>
         <footer>WINAMP-STYLE SKIN // NO COPYRIGHTED AUDIO</footer>
       </section>`);
@@ -325,6 +325,7 @@ STATUS: STILL PRINTING</pre>
   }
 
   function clippy() {
+    if (document.querySelector('.egg-clippy')) return;
     clippyShown = true;
     discover('clippy', 'Офисный помощник 1997');
     const bubble = document.createElement('aside');
@@ -405,6 +406,7 @@ STATUS: STILL PRINTING</pre>
 
     document.querySelector('#searchInput')?.addEventListener('input', event => {
       if (!clippyShown && event.target.value.trim().length >= 18) {
+        clippyShown = true;
         window.setTimeout(clippy, 500);
       }
     });
