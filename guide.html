@@ -1,21 +1,85 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#100a07"><meta name="description" content="Практические советы по 3D-печати пластиками и быстрый выбор материала под задачу."><title>Практика — 3D Пластики</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="theme-v5.css?v=5.0.0"></head><body>
-<header class="site-header"><div class="shell header-inner"><a class="brand" href="index.html"><span class="brand-spool"></span><span><b>3D</b> Пластики</span></a><button class="menu-toggle" type="button" aria-label="Открыть меню" aria-expanded="false">☰</button><nav class="nav"><a href="index.html"><span>⌂</span> Главная</a><a href="materials.html"><span>▦</span> Каталог</a><a href="compare.html"><span>▥</span> Сравнение</a><a href="supports.html"><span>⇄</span> Поддержки</a><a class="active" href="guide.html"><span>✦</span> Практика</a><button class="sound-toggle" type="button" aria-pressed="false">♪</button></nav></div></header>
-<main class="page-main shell" id="top"><section class="page-hero pixel-frame"><div><div class="eyebrow">FIELD MANUAL</div><h1>Практика печати</h1><p>Лайфхаки вынесены на отдельную страницу. Здесь нет каталога и таблиц — только рекомендации и быстрый выбор материала под задачу.</p></div><div class="page-hero-icon">✦</div></section>
-<section class="section"><div class="section-title"><span>💡</span><h2>Лайфхаки</h2><i></i></div><div class="guide-grid"><article class="tip-card" style="--pin:#4e9dac"><span>💧</span><h3>Суши гигроскопичные материалы</h3><p>PETG, TPU, Nylon, PC, PVA и BVOH заметно выигрывают от правильной сушки.</p></article><article class="tip-card" style="--pin:#606e78"><span>◆</span><h3>CF/GF быстро едят латунь</h3><p>Для наполненных пластиков используй закалённое, карбидное или рубиновое сопло.</p></article><article class="tip-card" style="--pin:#b65445"><span>▣</span><h3>ABS и ASA печатай в камере</h3><p>Закрытый объём уменьшает усадку, трещины и отрыв углов от стола.</p></article><article class="tip-card" style="--pin:#d89535"><span>♨</span><h3>PLA не любит жару</h3><p>Летом в автомобиле деталь может размягчиться и потерять форму.</p></article><article class="tip-card" style="--pin:#4d9b69"><span>✦</span><h3>PETG любит чистое сопло</h3><p>Налипший пластик обгорает и оставляет тёмные следы на поверхности модели.</p></article><article class="tip-card" style="--pin:#795b9b"><span>▤</span><h3>Interface — не весь support</h3><p>Дорогим материалом печатай только контактные слои, а не всё тело поддержек.</p></article><article class="tip-card" style="--pin:#4b9c8e"><span>▱</span><h3>PP печатай на PP-поверхности</h3><p>Специальная лента или поверхность решает большую часть проблем с адгезией.</p></article><article class="tip-card" style="--pin:#a45c77"><span>◎</span><h3>Начинай с температурной башни</h3><p>Диапазон на катушке — отправная точка, а не точная настройка для любого принтера.</p></article></div></section>
-<section class="section"><div class="section-title"><span>◆</span><h2>Быстрый выбор</h2><i></i></div><div id="questGrid" class="quest-grid"></div><div id="questResult" class="quest-result pixel-frame"></div></section></main>
-<footer class="footer"><div class="shell footer-inner"><div class="footer-decor">▥ 🌿 🐈</div><div class="footer-center"><span>Автор</span><b>Алексей Прокопчук</b><small>© 2026. Все права защищены.</small></div><div class="footer-links"><a href="index.html">Главная</a><a href="materials.html">Каталог</a><a href="supports.html">Поддержки</a></div></div></footer><button class="back-to-top" type="button"><span>↑</span><small>TOP</small></button><script src="materials.js"></script><script src="common-v5.js?v=5.0.0"></script><script>
-(() => {
-  const grid=document.querySelector('#questGrid');
-  const result=document.querySelector('#questResult');
-  grid.innerHTML=QUESTS.map(quest=>`<button class="quest-card" type="button" data-quest="${quest.id}"><span>${quest.icon}</span><b>${quest.title}</b><small>${quest.material}</small></button>`).join('');
-  function selectQuest(id){
-    const quest=QUESTS.find(item=>item.id===id); if(!quest)return;
-    const material=MATERIALS.find(item=>item.name===quest.material);
-    document.querySelectorAll('.quest-card').forEach(card=>card.classList.toggle('active',card.dataset.quest===id));
-    result.innerHTML=`<span class="quest-avatar" style="--accent:${material?.color||'#55b8bd'}">${quest.icon}</span><div><small>${quest.title}</small><h3>${quest.material}</h3><p>${quest.text}</p><a class="pixel-button secondary" href="materials.html?material=${encodeURIComponent(quest.material)}">Открыть карточку</a></div>`;
-    window.uiBeep?.(700);
-  }
-  grid.addEventListener('click',event=>{const card=event.target.closest('[data-quest]');if(card)selectQuest(card.dataset.quest)});
-  selectQuest(QUESTS[0]?.id);
-})();
-</script></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#100b07">
+  <meta name="description" content="Практические советы по 3D-печати пластиками и быстрый выбор материала под задачу.">
+  <title>Практика — 3D Пластики</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="pixel-v6.css?v=6.0.0">
+  <link rel="stylesheet" href="inner-v7.css?v=7.0.0">
+</head>
+<body>
+  <div class="pixel-noise" aria-hidden="true"></div>
+  <div class="site-shell">
+    <header class="top-panel pixel-frame">
+      <a class="logo" href="index.html"><span class="logo-spool"><i></i></span><b>3D Пластики</b></a>
+      <button class="menu-button" type="button" aria-expanded="false" aria-label="Открыть меню">☰</button>
+      <nav class="top-nav" aria-label="Главная навигация">
+        <a href="materials.html"><span>▦</span> Виды пластиков</a>
+        <a href="compare.html"><span>▥</span> Характеристики</a>
+        <a href="supports.html"><span>◆</span> Поддержки</a>
+        <a class="active-page" href="guide.html"><span>✦</span> Лайфхаки</a>
+        <a href="index.html#compatibility"><span>▤</span> Совместимость</a>
+      </nav>
+    </header>
+
+    <main class="inner-main" id="top">
+      <section class="inner-hero pixel-frame">
+        <div><p class="inner-kicker">FIELD MANUAL // PRINT SMARTER</p><h1>Практика печати</h1><p>Рекомендации, которые экономят пластик, время и нервы. Без лишних таблиц — только рабочие правила и быстрый выбор материала под задачу.</p></div>
+        <div class="inner-hero-icon">✦</div>
+      </section>
+
+      <section class="inner-section dashboard-panel pixel-frame">
+        <div class="inner-heading"><span>💡</span><h2>Лайфхаки</h2><i></i></div>
+        <div class="guide-grid">
+          <article class="tip-card" style="--pin:#4e9dac"><span>💧</span><h3>Суши гигроскопичные материалы</h3><p>PETG, TPU, Nylon, PC, PVA и BVOH заметно выигрывают от правильной сушки.</p></article>
+          <article class="tip-card" style="--pin:#606e78"><span>◆</span><h3>CF/GF быстро едят латунь</h3><p>Для наполненных пластиков используй закалённое, карбидное или рубиновое сопло.</p></article>
+          <article class="tip-card" style="--pin:#b65445"><span>▣</span><h3>ABS и ASA печатай в камере</h3><p>Закрытый объём уменьшает усадку, трещины и отрыв углов от стола.</p></article>
+          <article class="tip-card" style="--pin:#d89535"><span>♨</span><h3>PLA не любит жару</h3><p>Летом в автомобиле деталь может размягчиться и потерять форму.</p></article>
+          <article class="tip-card" style="--pin:#4d9b69"><span>✦</span><h3>PETG любит чистое сопло</h3><p>Налипший пластик обгорает и оставляет тёмные следы на поверхности модели.</p></article>
+          <article class="tip-card" style="--pin:#795b9b"><span>▤</span><h3>Interface — не весь support</h3><p>Дорогим материалом печатай только контактные слои, а не всё тело поддержек.</p></article>
+          <article class="tip-card" style="--pin:#4b9c8e"><span>▱</span><h3>PP печатай на PP-поверхности</h3><p>Специальная лента или поверхность решает большую часть проблем с адгезией.</p></article>
+          <article class="tip-card" style="--pin:#a45c77"><span>◎</span><h3>Начинай с температурной башни</h3><p>Диапазон на катушке — отправная точка, а не точная настройка для любого принтера.</p></article>
+        </div>
+      </section>
+
+      <section class="inner-section dashboard-panel pixel-frame">
+        <div class="inner-heading"><span>◆</span><h2>Быстрый выбор</h2><i></i></div>
+        <div id="questGrid" class="quest-grid"></div>
+        <div id="questResult" class="quest-result pixel-frame"></div>
+      </section>
+    </main>
+
+    <footer class="footer-panel inner-footer pixel-frame">
+      <div class="footer-decor">▥ 📚 🌿 🐈</div>
+      <div class="footer-author"><span>Автор:</span><b>Алексей Прокопчук</b><small>© 2026. Все права защищены.</small></div>
+      <div class="footer-links"><a href="index.html">Главная</a><a href="materials.html">Каталог</a><a href="supports.html">Поддержки</a></div>
+      <div class="footer-cup">☕</div>
+    </footer>
+  </div>
+
+  <button class="back-to-top" type="button" aria-label="Вернуться наверх"><span>↑</span><small>TOP</small></button>
+  <script src="materials.js"></script>
+  <script src="inner-v7.js?v=7.0.0"></script>
+  <script>
+    (() => {
+      const grid=document.querySelector('#questGrid');
+      const result=document.querySelector('#questResult');
+      grid.innerHTML=QUESTS.map(quest=>`<button class="quest-card" type="button" data-quest="${quest.id}"><span>${quest.icon}</span><b>${quest.title}</b><small>${quest.material}</small></button>`).join('');
+      function selectQuest(id){
+        const quest=QUESTS.find(item=>item.id===id); if(!quest)return;
+        const material=MATERIALS.find(item=>item.name===quest.material);
+        document.querySelectorAll('.quest-card').forEach(card=>card.classList.toggle('active',card.dataset.quest===id));
+        result.innerHTML=`<span class="quest-avatar" style="--accent:${material?.color||'#55b8bd'}">${quest.icon}</span><div><small>${quest.title}</small><h3>${quest.material}</h3><p>${quest.text}</p><a class="pixel-button secondary" href="materials.html?material=${encodeURIComponent(quest.material)}">Открыть карточку</a></div>`;
+        window.uiBeep?.(700);
+      }
+      grid.addEventListener('click',event=>{const card=event.target.closest('[data-quest]');if(card)selectQuest(card.dataset.quest)});
+      selectQuest(QUESTS[0]?.id);
+    })();
+  </script>
+</body>
+</html>
