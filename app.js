@@ -207,13 +207,25 @@ function addCopyrightNotice() {
   container.append(notice);
 }
 
+function loadEasterEggs() {
+  const stylesheet = document.createElement('link');
+  stylesheet.rel = 'stylesheet';
+  stylesheet.href = 'easter-eggs.css';
+  document.head.append(stylesheet);
+
+  const script = document.createElement('script');
+  script.src = 'easter-eggs.js';
+  script.defer = true;
+  document.body.append(script);
+}
+
 function init() {
   fillFilters();
   MATERIALS.filter(m => m.family !== 'Поддержки').forEach(m => {
     const option=document.createElement('option'); option.value=m.name; option.textContent=m.name; els.modelMaterial.append(option);
   });
   els.modelMaterial.value='PETG';
-  renderMaterials(); renderCompare(); updateSupport(); renderQuests(); bindEvents(); addCopyrightNotice();
+  renderMaterials(); renderCompare(); updateSupport(); renderQuests(); bindEvents(); addCopyrightNotice(); loadEasterEggs();
 }
 
 init();
