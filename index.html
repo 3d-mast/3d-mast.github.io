@@ -4,137 +4,106 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Энциклопедия пластиков для FDM 3D-печати: характеристики, температуры, сушка и совместимость поддержек.">
-  <meta name="theme-color" content="#120b07">
+  <meta name="theme-color" content="#100a07">
   <title>3D Пластики — энциклопедия материалов</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="site-v4-base.css?v=4.0.0">
-  <link rel="stylesheet" href="site-v4-workshop.css?v=4.0.0">
-  <link rel="stylesheet" href="site-v4-catalog.css?v=4.0.0">
-  <link rel="stylesheet" href="site-v4-sections.css?v=4.0.0">
-  <link rel="stylesheet" href="site-v4-responsive.css?v=4.0.0">
+  <link rel="stylesheet" href="theme-v5.css?v=5.0.0">
 </head>
 <body>
-  <div class="page-texture" aria-hidden="true"></div>
-  <header class="site-header">
-    <div class="shell header-inner">
-      <a class="brand" href="#top" aria-label="На главную"><span class="brand-spool"><i></i></span><span><b>3D</b> Пластики</span></a>
-      <button class="menu-toggle" type="button" aria-label="Открыть меню" aria-expanded="false">☰</button>
-      <nav class="nav" aria-label="Основная навигация">
-        <a href="#popular"><span>▦</span> Пластики</a>
-        <a href="#catalog"><span>▤</span> Каталог</a>
-        <a href="#support"><span>⇄</span> Поддержки</a>
-        <a href="#tips"><span>✦</span> Лайфхаки</a>
-        <a href="#picker"><span>◆</span> Выбор</a>
-        <button class="sound-toggle" type="button" aria-pressed="false" title="Звуки интерфейса">♪</button>
-      </nav>
+<header class="site-header">
+  <div class="shell header-inner">
+    <a class="brand" href="index.html"><span class="brand-spool" aria-hidden="true"></span><span><b>3D</b> Пластики</span></a>
+    <button class="menu-toggle" type="button" aria-label="Открыть меню" aria-expanded="false">☰</button>
+    <nav class="nav" aria-label="Основная навигация">
+      <a class="active" href="index.html"><span>⌂</span> Главная</a>
+      <a href="materials.html"><span>▦</span> Каталог</a>
+      <a href="compare.html"><span>▥</span> Сравнение</a>
+      <a href="supports.html"><span>⇄</span> Поддержки</a>
+      <a href="guide.html"><span>✦</span> Практика</a>
+      <button class="sound-toggle" type="button" aria-pressed="false" title="Звуки интерфейса">♪</button>
+    </nav>
+  </div>
+</header>
+
+<main class="page-main shell" id="top">
+  <section class="hero pixel-frame">
+    <div class="hero-copy">
+      <div class="eyebrow">PIXEL FILAMENT WORKSHOP // DATABASE ONLINE</div>
+      <h1>3D Пластики<small>Энциклопедия материалов для 3D-печати</small></h1>
+      <p>Характеристики, температуры, сушка, назначение и совместимость материалов для интерфейсных слоёв поддержек.</p>
+      <div class="hero-actions">
+        <a class="pixel-button" href="materials.html">Смотреть материалы</a>
+        <div class="hero-count"><b id="materialCount">0</b><span>материалов</span><small>в базе</small></div>
+      </div>
     </div>
-  </header>
-
-  <main id="top">
-    <section class="hero shell pixel-frame">
-      <div class="hero-copy">
-        <span class="eyebrow">PIXEL FILAMENT WORKSHOP</span>
-        <h1><span>3D Пластики</span><small>Энциклопедия материалов<br>для 3D-печати</small></h1>
-        <p>Характеристики, температуры, сушка, применение и совместимость материалов для интерфейсных слоёв поддержек.</p>
-        <div class="hero-actions">
-          <a class="pixel-button primary" href="#catalog">Смотреть материалы <b>›</b></a>
-          <a class="pixel-button secondary" href="#support">Подобрать поддержку</a>
-        </div>
-        <div class="hero-count"><span>★</span><b id="materialCount">0</b><small>материалов<br>в базе</small></div>
+    <div class="workshop" aria-label="Пиксельная мастерская с 3D-принтером">
+      <div class="lamp" aria-hidden="true"><i class="cord"></i><i class="shade"></i><i class="glow"></i></div>
+      <div class="spool-rack" aria-hidden="true">
+        <span style="--c:#405d31"></span><span style="--c:#d5862d"></span><span style="--c:#376f94"></span><span style="--c:#773f65"></span>
+        <span style="--c:#d7c9aa"></span><span style="--c:#39454c"></span><span style="--c:#bc5d42"></span><span style="--c:#6c8d42"></span>
       </div>
-
-      <div class="workshop" aria-label="Пиксельная мастерская с 3D-принтером">
-        <div class="lamp"><i class="cord"></i><i class="shade"></i><i class="light"></i></div>
-        <div class="spool-rack" aria-hidden="true">
-          <span style="--c:#d85432"></span><span style="--c:#5b9b4b"></span><span style="--c:#2e75a7"></span><span style="--c:#d79735"></span>
-          <span style="--c:#8d67a5"></span><span style="--c:#e8ded0"></span><span style="--c:#31343b"></span><span style="--c:#4aa3a0"></span>
-        </div>
-        <div class="printer-scene">
-          <div class="printer-frame"><i class="printer-top"></i><i class="printer-left"></i><i class="printer-right"></i><i class="printer-rail"><b></b></i><i class="printer-bed"><b class="benchy"></b></i><i class="printer-base"><b>READY</b></i></div>
-        </div>
-        <div class="poster">MAKE<br>PRINTS<br><b>NOT WAR</b></div>
-        <div class="tools">⌕<br>⚒</div>
-        <div class="plant"><i></i><i></i><i></i><b></b></div>
-        <div class="mascot"><i class="tail"></i><i class="body"></i><i class="head"><b></b><b></b><em></em></i></div>
-        <div class="mug">♥<i></i><i></i></div>
+      <div class="printer-scene" aria-hidden="true">
+        <i class="printer-top"></i><i class="printer-left"></i><i class="printer-right"></i>
+        <i class="printer-rail"><b></b></i><i class="printer-bed"><b class="benchy"></b></i><i class="printer-base"><b>READY</b></i>
       </div>
-    </section>
-
-    <section id="popular" class="section shell">
-      <div class="panel pixel-frame">
-        <div class="panel-title"><span>★</span><h2>Популярные пластики</h2><i></i></div>
-        <div id="popularGrid" class="popular-grid"></div>
-      </div>
-      <div class="panel pixel-frame special-panel">
-        <div class="panel-title"><span>⚗</span><h2>Специальные и композитные</h2><i></i></div>
-        <div id="specialGrid" class="special-grid"></div>
-      </div>
-    </section>
-
-    <section id="catalog" class="section shell">
-      <div class="section-heading"><div><span>01 // ПОЛНАЯ БАЗА</span><h2>Каталог материалов</h2><p>Фильтруй материалы и открывай подробную карточку с параметрами печати.</p></div><div class="result-counter"><b id="visibleCount">0</b><small>найдено</small></div></div>
-      <div class="toolbar pixel-frame">
-        <label class="search-box"><span>⌕</span><input id="searchInput" type="search" placeholder="PLA, PETG, Nylon, гибкий…" autocomplete="off"></label>
-        <select id="familyFilter" aria-label="Семейство"><option value="all">Все семейства</option></select>
-        <select id="difficultyFilter" aria-label="Сложность"><option value="all">Любая сложность</option><option value="1">Просто</option><option value="2">Средне</option><option value="3">Сложно</option><option value="4">Промышленно</option></select>
-        <button id="resetFilters" class="small-button" type="button">Сбросить</button>
-      </div>
-      <div id="familyChips" class="chips" aria-label="Быстрые фильтры"></div>
-      <div id="materialsGrid" class="materials-grid"></div>
-      <div id="emptyState" class="empty-state pixel-frame" hidden><b>?</b><h3>Ничего не найдено</h3><p>Сбрось фильтры — пластик никуда не делся.</p></div>
-    </section>
-
-    <section class="section shell compare-section">
-      <div class="section-heading compact"><div><span>02 // СРАВНЕНИЕ</span><h2>Сравнить материалы</h2><p>Добавь до трёх материалов из каталога.</p></div><button id="clearCompare" class="small-button danger" type="button">Очистить</button></div>
-      <div id="compareTray" class="compare-tray pixel-frame"><div class="compare-placeholder">Пока пусто. Выбери материалы в каталоге.</div></div>
-    </section>
-
-    <section id="support" class="section shell">
-      <div class="section-heading"><div><span>03 // SUPPORT INTERFACE</span><h2>Связующий слой поддержек</h2><p>Другим пластиком печатают только контактные слои, а не всё тело поддержки.</p></div></div>
-      <div class="support-layout">
-        <div class="support-picker pixel-frame"><label for="modelMaterial">Материал модели</label><select id="modelMaterial"></select><div id="supportResult" class="support-result"></div></div>
-        <div class="support-info pixel-frame">
-          <div class="support-list"><span><b>PLA</b><i>↔</i><strong>PETG</strong></span><span><b>PETG</b><i>↔</i><strong>PLA</strong></span><span><b>ABS / ASA</b><i>→</i><strong>HIPS</strong></span><span><b>Nylon / PA</b><i>→</i><strong>Support for PA</strong></span><span><b>PC / PEEK</b><i>→</i><strong>High-temp support</strong></span></div>
-          <div class="support-settings"><span><small>Interface layers</small><b>2–4</b></span><span><small>Top Z distance</small><b>0 мм</b></span><span><small>Prime tower</small><b>ВКЛ</b></span><span><small>Промывка</small><b>Высокая</b></span></div>
-        </div>
-      </div>
-    </section>
-
-    <section id="tips" class="section shell">
-      <div class="section-heading"><div><span>04 // ПРАКТИКА</span><h2>Лайфхаки</h2><p>Правила, которые экономят пластик, время и нервы.</p></div></div>
-      <div class="tips-grid">
-        <article class="tip-card"><span>💧</span><b>Суши PETG, Nylon, TPU и PVA</b><p>Влага портит поверхность, прочность и стабильность подачи.</p></article>
-        <article class="tip-card"><span>◆</span><b>Для CF/GF нужно твёрдое сопло</b><p>Латунь быстро изнашивается от наполнителей.</p></article>
-        <article class="tip-card"><span>▣</span><b>ABS и ASA печатай в камере</b><p>Закрытый объём уменьшает трещины и отрыв углов.</p></article>
-        <article class="tip-card"><span>♨</span><b>PLA боится жары</b><p>Летом в автомобиле деталь может размягчиться.</p></article>
-        <article class="tip-card"><span>✦</span><b>PETG любит чистое сопло</b><p>Налипший пластик оставляет тёмные следы на модели.</p></article>
-        <article class="tip-card"><span>▤</span><b>Interface — не весь support</b><p>Дорогим материалом печатай только контактные слои.</p></article>
-        <article class="tip-card"><span>▱</span><b>PP печатай на PP-поверхности</b><p>Обычные покрытия часто не держат полипропилен.</p></article>
-        <article class="tip-card"><span>◎</span><b>Начинай с температурной башни</b><p>Диапазон на катушке — только отправная точка.</p></article>
-      </div>
-    </section>
-
-    <section id="picker" class="section shell">
-      <div class="section-heading"><div><span>05 // БЫСТРЫЙ ВЫБОР</span><h2>Что взять под задачу</h2><p>Выбери сценарий и получи нормальную стартовую рекомендацию.</p></div></div>
-      <div id="questGrid" class="quest-grid"></div>
-      <div id="questResult" class="quest-result pixel-frame" aria-live="polite"><span class="quest-avatar">?</span><div><small>Выбери задачу выше</small><h3>Материал появится здесь</h3><p>С кратким объяснением, почему именно он.</p></div></div>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <div class="shell footer-inner">
-      <div class="footer-decor"><span>▥</span><span>♣</span><span>🐈</span></div>
-      <div class="footer-center"><span>Автор</span><b>Алексей Прокопчук</b><small>© 2026. Все права защищены.</small></div>
-      <div class="footer-links"><a href="#catalog">Каталог</a><a href="#support">Поддержки</a><a href="https://github.com/3d-mast/3d-mast.github.io" rel="noopener">GitHub</a></div>
-      <div class="footer-mug">☕</div>
+      <div class="poster">MAKE<br>PRINTS<br><b>NOT WAR</b></div><div class="tools">⚒<br>⚙</div>
+      <div class="plant" aria-hidden="true"><i></i><i></i><i></i><b></b></div>
+      <div class="mascot" aria-hidden="true"><i class="tail"></i><i class="body"></i><i class="head"><b></b><b></b><em></em></i></div>
+      <div class="mug" aria-hidden="true">♥<i></i><i></i></div>
     </div>
-  </footer>
+  </section>
 
-  <button id="backToTop" class="back-to-top" type="button" aria-label="Вернуться наверх"><span>↑</span><small>TOP</small></button>
-  <dialog id="materialDialog" class="material-dialog"><button class="dialog-close" type="button" aria-label="Закрыть">×</button><div id="dialogContent"></div></dialog>
-  <script src="materials.js"></script>
-  <script src="site-v4.js?v=4.0.0"></script>
+  <section class="section popular-panel pixel-frame">
+    <div class="section-title"><span>★</span><h2>Популярные пластики</h2><i></i></div>
+    <div id="popularGrid" class="popular-grid"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-title"><span>▤</span><h2>Выбери раздел</h2><i></i></div>
+    <div class="route-grid">
+      <a class="route-card" href="materials.html" style="--accent:#2f817c"><span>▦</span><h3>Каталог материалов</h3><p>Поиск, фильтры и подробные карточки. Материалы подгружаются порциями, а не вываливаются одной стеной.</p><small>ОТКРЫТЬ →</small></a>
+      <a class="route-card" href="compare.html" style="--accent:#a26d2c"><span>▥</span><h3>Сравнение</h3><p>Выбери три пластика и сопоставь температуры, прочность, гибкость, сушку и сложность печати.</p><small>СРАВНИТЬ →</small></a>
+      <a class="route-card" href="supports.html" style="--accent:#397c87"><span>⇄</span><h3>Поддержки</h3><p>Подбор связующего материала для контактных слоёв и стартовые настройки интерфейса.</p><small>ПОДОБРАТЬ →</small></a>
+      <a class="route-card" href="guide.html" style="--accent:#7d5aa0"><span>✦</span><h3>Практика</h3><p>Лайфхаки, быстрый выбор пластика под задачу и советы, которые экономят время и катушки.</p><small>ЧИТАТЬ →</small></a>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="shell footer-inner">
+    <div class="footer-decor">▥ 🌿 🐈</div>
+    <div class="footer-center"><span>Автор</span><b>Алексей Прокопчук</b><small>© 2026. Все права защищены.</small></div>
+    <div class="footer-links"><a href="materials.html">Каталог</a><a href="supports.html">Поддержки</a><a href="https://github.com/3d-mast/3d-mast.github.io" rel="noopener">GitHub</a></div>
+  </div>
+</footer>
+<button class="back-to-top" type="button" aria-label="Вернуться наверх"><span>↑</span><small>TOP</small></button>
+<script src="materials.js"></script>
+<script src="common-v5.js?v=5.0.0"></script>
+<script>
+(() => {
+  const names = ['PLA','PLA+','PETG','PCTG','ABS','ASA','HIPS','TPU 95A','PA6 Nylon','PA12 Nylon','PC','PEEK'];
+  const grid = document.querySelector('#popularGrid');
+  const count = document.querySelector('#materialCount');
+  if (count) count.textContent = MATERIALS.length;
+  if (grid) {
+    grid.innerHTML = names.map(name => MATERIALS.find(material => material.name === name)).filter(Boolean).map(material => `
+      <a class="popular-card" href="materials.html?material=${encodeURIComponent(material.name)}" style="--accent:${material.color}">
+        <span class="mini-spool" aria-hidden="true"></span>
+        <span><b>${material.name}</b><small>${material.desc}</small></span>
+      </a>`).join('');
+  }
+
+  const eggStyle = document.createElement('link');
+  eggStyle.rel = 'stylesheet';
+  eggStyle.href = 'easter-eggs.css?v=5.0.0';
+  document.head.append(eggStyle);
+  const eggScript = document.createElement('script');
+  eggScript.src = 'easter-eggs.js?v=5.0.0';
+  eggScript.defer = true;
+  document.body.append(eggScript);
+})();
+</script>
 </body>
 </html>
