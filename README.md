@@ -4,9 +4,7 @@
 
 ## Сайт
 
-После переименования репозитория в `3dp` и включения GitHub Pages:
-
-**https://citysnake.github.io/3dp/**
+**https://3d-mast.github.io/**
 
 Публикация выполняется автоматически через GitHub Actions при каждом обновлении ветки `main`.
 
