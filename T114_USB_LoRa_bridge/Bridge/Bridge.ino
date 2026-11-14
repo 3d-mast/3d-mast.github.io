@@ -62,14 +62,23 @@ static void setEvent(const char *event) {
 static void initDisplay() {
   pinMode(PIN_TFT_VDD_CTL, OUTPUT);
   pinMode(PIN_TFT_LEDA_CTL, OUTPUT);
+  digitalWrite(PIN_TFT_LEDA_CTL, !TFT_LEDA_ENABLE);
   digitalWrite(PIN_TFT_VDD_CTL, TFT_VDD_ENABLE);
-  digitalWrite(PIN_TFT_LEDA_CTL, TFT_LEDA_ENABLE);
-  delay(250);
+  delay(1000); // Let LCD supply stabilise, same wait as official Heltec example
   display.init(135, 240);
   display.setRotation(3);
-  display.setSPISpeed(40000000);
+  display.setSPISpeed(8000000); // Start at a conservative clock for LCD reliability
   display.setTextWrap(false);
-  display.fillScreen(ST77XX_BLACK);
+  display.fillScreen(ST77XX_BLUE);
+  display.setTextColor(ST77XX_WHITE);
+  display.setTextSize(3);
+  display.setCursor(12, 18); display.print("STRELA");
+  display.setTextSize(2);
+  display.setCursor(12, 66); display.print("DISPLAY TEST");
+  display.setCursor(12, 95); display.print("v0.4");
+  digitalWrite(PIN_TFT_LEDA_CTL, TFT_LEDA_ENABLE);
+  delay(1200);
+  displayAt = millis() - 250;
 }
 static void drawDisplay() {
   const uint32_t seconds = millis() / 1000;
@@ -88,7 +97,7 @@ static void drawDisplay() {
   display.setCursor(5, 4); display.print("STRELA");
   display.setTextSize(1);
   display.setTextColor(ST77XX_WHITE);
-  display.setCursor(129, 11); display.print("T114  v0.3");
+  display.setCursor(129, 11); display.print("T114  v0.4");
   display.drawFastHLine(0, 27, 240, ST77XX_BLUE);
 
   display.setCursor(5, 35);
@@ -191,7 +200,12 @@ static void onRxDone(uint8_t*buf,uint16_t size,int16_t rssi,int8_t snr){
   startRx();
 }
 static void submitLine(){
-  if(lineTooLong){
+  if(!lineTooLong && serialLen==1 && serialLine[0]=='?'){
+    Serial.print("STRELA v0.4 READY 868100000 Hz NODE=");
+    Serial.println(nodeId, HEX);
+    setEvent("USB STATUS OK");
+  }
+  else if(lineTooLong){
     Serial.println("ERR line too long (max 64 UTF-8 bytes)");
     setEvent("USB TOO LONG");
   }
@@ -222,12 +236,18 @@ static void pollSerial(){
 void setup(){
   boardInit(false,0,115200);
   Serial.begin(115200);
-  pinMode(PIN_LED1,OUTPUT);digitalWrite(PIN_LED1,!LED_STATE_ON);
+  Serial.println("BOOT 1/4: MCU");
+  pinMode(PIN_LED1,OUTPUT);digitalWrite(PIN_LED1,LED_STATE_ON);
   initDisplay();
+  Serial.println("BOOT 2/4: LCD INITIALISED");
+  digitalWrite(PIN_LED1,!LED_STATE_ON);
   const uint64_t id=getID();
   nodeId=uint32_t(id) ^ uint32_t(id>>32);
   if(nodeId==0)nodeId=1;
   nextSeq=uint16_t(id>>16);
+  setEvent("STARTING RADIO");
+  drawDisplay(); // Must appear even if SX1262 initialisation stalls.
+  Serial.println("BOOT 3/4: RADIO");
   radioEvents.TxDone=onTxDone;
   radioEvents.TxTimeout=onTxTimeout;
   radioEvents.RxDone=onRxDone;
@@ -239,7 +259,8 @@ void setup(){
   Radio.SetTxConfig(MODEM_LORA,TX_DBM,0,0,7,1,8,false,true,0,0,false,3000);
   Radio.SetRxConfig(MODEM_LORA,0,7,1,0,8,0,false,0,true,0,0,false,true);
   startRx();
-  Serial.println("T114 USB-LORA v0.3 READY 868.100 MHz P2P");
+  Serial.println("BOOT 4/4: READY");
+  Serial.println("T114 USB-LORA v0.4 READY 868.100 MHz P2P");
   setEvent("LISTENING");
   drawDisplay();
 }
