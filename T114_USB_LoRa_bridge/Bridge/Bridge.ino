@@ -82,6 +82,7 @@ static void store16(uint8_t *p,uint16_t v) {
   p[0]=uint8_t(v);p[1]=uint8_t(v>>8);
 }
 static void setStatus(const char *text) {
+  if(strcmp(statusText,text)==0)return;
   statusText=text;
   screenDirty=true;
 }
