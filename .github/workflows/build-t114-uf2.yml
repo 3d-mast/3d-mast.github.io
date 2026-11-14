@@ -25,6 +25,11 @@ jobs:
           INDEX='https://github.com/HelTecAutomation/Heltec_nRF52/releases/download/1.7.0/package_heltec_nrf_index.json'
           arduino-cli core update-index --additional-urls "$INDEX"
           arduino-cli core install Heltec_nRF52:Heltec_nRF52@1.7.0 --additional-urls "$INDEX"
+      - name: Install T114 screen libraries
+        run: |
+          set -euo pipefail
+          arduino-cli lib install "Adafruit GFX Library"
+          arduino-cli lib install "Adafruit ST7735 and ST7789 Library"
       - name: Compile for Mesh Node T114 (HT-n5262)
         run: |
           set -euo pipefail
@@ -68,13 +73,13 @@ jobs:
               block=header+data+b'\x00'*(512-32-256-4)+struct.pack('<I',0x0AB16F30)
               assert len(block)==512
               uf.extend(block)
-          output=pathlib.Path('T114_USB_LoRa_bridge_v0.2.uf2')
+          output=pathlib.Path('T114_USB_LoRa_bridge_v0.3.uf2')
           output.write_bytes(uf)
           assert len(uf)==len(addrs)*512
           print('VALID UF2',len(addrs),'blocks,',len(uf),'bytes, first',hex(addrs[0]),'last',hex(addrs[-1]))
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: T114-USB-LoRa-v0.2-UF2
-          path: T114_USB_LoRa_bridge_v0.2.uf2
+          name: T114-USB-LoRa-v0.3-UF2
+          path: T114_USB_LoRa_bridge_v0.3.uf2
           if-no-files-found: error
