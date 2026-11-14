@@ -1,0 +1,63 @@
+name: Build T114 Boot Diagnostic UF2
+on:
+  push:
+    branches: [work/t114-usb-lora-uf2]
+    paths:
+      - 'T114_USB_LoRa_bridge/BootDiag/**'
+      - '.github/workflows/build-t114-diag.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Install official Heltec nRF52 1.7.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          INDEX='https://github.com/HelTecAutomation/Heltec_nRF52/releases/download/1.7.0/package_heltec_nrf_index.json'
+          arduino-cli core update-index --additional-urls "$INDEX"
+          arduino-cli core install Heltec_nRF52:Heltec_nRF52@1.7.0 --additional-urls "$INDEX"
+          arduino-cli lib install "Adafruit GFX Library"
+          arduino-cli lib install "Adafruit ST7735 and ST7789 Library"
+      - name: Compile T114 BootDiag
+        shell: bash
+        run: |
+          set -euo pipefail
+          arduino-cli compile --build-property 'recipe.objcopy.uf2.pattern=/usr/bin/true' --build-property 'recipe.objcopy.zip.pattern=/usr/bin/true' --fqbn Heltec_nRF52:Heltec_nRF52:HT-n5262 --output-dir "$GITHUB_WORKSPACE/build" T114_USB_LoRa_bridge/BootDiag
+          ls -lah build
+      - name: Convert with Heltec official uf2conv and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, subprocess, struct
+          src = list(pathlib.Path('build').glob('*.hex'))
+          assert len(src)==1,src
+          tool = pathlib.Path.home()/'.arduino15/packages/Heltec_nRF52/hardware/Heltec_nRF52/1.7.0/tools/uf2conv/uf2conv.py'
+          output = pathlib.Path('STRELA_T114_BOOT_DIAG_v0.5.uf2')
+          subprocess.run(['python3',str(tool),'-f','0xADA52840','-c','-o',str(output),str(src[0])],check=True)
+          data=output.read_bytes()
+          assert len(data)%512==0 and len(data)>0
+          n=len(data)//512
+          blocks=[struct.unpack_from('<8I',data,i*512) for i in range(n)]
+          assert all(x[0]==0x0A324655 and x[1]==0x9E5D5157 for x in blocks)
+          assert all(x[2]==0x2000 and x[4]==256 and x[6]==n and x[7]==0xADA52840 for x in blocks)
+          assert all(x[5]==i for i,x in enumerate(blocks))
+          assert all(0x26000<=x[3]<0xED000 for x in blocks)
+          assert blocks[0][3]==0x26000,hex(blocks[0][3])
+          first=data[32:32+8]
+          stack,reset=struct.unpack('<II',first)
+          assert 0x20000000<=stack<=0x20040000,hex(stack)
+          assert 0x26000 <= (reset&~1)<0xED000 and reset&1,hex(reset)
+          assert all(struct.unpack_from('<I',data,(i+1)*512-4)[0]==0x0AB16F30 for i in range(n))
+          print('Verified:',output.name,len(data),'bytes',n,'blocks, app origin',hex(blocks[0][3]),'SP',hex(stack),'Reset',hex(reset))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: STRELA-T114-BOOT-DIAG-v0.5-UF2
+          path: STRELA_T114_BOOT_DIAG_v0.5.uf2
+          if-no-files-found: error
