@@ -1,4 +1,4 @@
-// СТРЕЛА v0.8: Heltec Mesh Node T114 (HT-n5262), nRF52840, SX1262
+// СТРЕЛА v0.9: Heltec Mesh Node T114 (HT-n5262), nRF52840, SX1262
 // Тестовый USB CDC -> LoRa P2P мост, без шифрования, GPS и ретрансляции.
 // Кнопка USER (PIN_BUTTON1): новый опрос сети с нулевым счётчиком.
 // СЧЁТЧИК УЗЛОВ = уникальные ID, ответившие на текущий тестовый пакет.
@@ -117,7 +117,7 @@ static void startScreen() {
   font.print("СТРЕЛА");
   font.setFont(u8g2_font_7x13_t_cyrillic);
   font.setCursor(12,82);
-  font.print("ЗАГРУЗКА v0.7");
+  font.print("ЗАГРУЗКА v0.9");
   digitalWrite(PIN_TFT_LEDA_CTL,TFT_LEDA_ENABLE);
   delay(400);
 }
@@ -135,7 +135,7 @@ static void drawScreen(bool force=false) {
   tft.fillScreen(ST77XX_BLACK);
   font.setFont(u8g2_font_7x13_t_cyrillic);
   lineAt(5,13,"СТРЕЛА",ST77XX_CYAN);
-  lineAt(175,13,"v0.8",ST77XX_WHITE);
+  lineAt(175,13,"v0.9",ST77XX_WHITE);
   tft.drawFastHLine(0,18,240,ST77XX_BLUE);
 
   font.setFont(u8g2_font_10x20_t_cyrillic);
@@ -288,7 +288,7 @@ static void finishSerialLine() {
     setStatus("СЛИШКОМ ДЛИННО");
   } else if(serialLength) {
     if(serialLength==1&&serialBuffer[0]=='?') {
-      Serial.print("STRELA v0.8 NODE=");Serial.print(myId,HEX);
+      Serial.print("STRELA v0.9 NODE=");Serial.print(myId,HEX);
       Serial.print(" NODES=");Serial.println(responderCount);
     } else if(textPending) {
       Serial.println("BUSY");
@@ -317,7 +317,7 @@ static void bootStep(uint8_t number, const char *step) {
   tft.fillScreen(ST77XX_BLUE);
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
-  tft.setCursor(7,5); tft.print("STRELA v0.8");
+  tft.setCursor(7,5); tft.print("STRELA v0.9");
   tft.setTextSize(2);
   tft.setCursor(7,39); tft.print("RADIO STEP:");
   tft.setTextSize(3);
@@ -336,7 +336,7 @@ void setup() {
   delay(40);
   safeMode=(digitalRead(PIN_BUTTON1)==LOW);
   Serial.begin(115200);
-  Serial.println("STRELA v0.8 START");
+  Serial.println("STRELA v0.9 START");
   startScreen();
   myId=1;
   buttonLastRaw=(digitalRead(PIN_BUTTON1)!=LOW);
@@ -350,16 +350,17 @@ void setup() {
     return;
   }
 
-  bootStep(1,"Before boardInit");
-  boardInit(false,0,115200);
-  bootStep(2,"After boardInit");
+  // No vendor boardInit: v0.8 reproducibly stalled inside it.
+  bootStep(1,"boardInit SKIPPED");
   pinMode(PIN_TFT_VDD_CTL,OUTPUT);
   digitalWrite(PIN_TFT_VDD_CTL,TFT_VDD_ENABLE);
   pinMode(PIN_TFT_LEDA_CTL,OUTPUT);
   digitalWrite(PIN_TFT_LEDA_CTL,TFT_LEDA_ENABLE);
-  bootStep(3,"Before getID");
-  const uint64_t hardwareId=getID();
-  myId=uint32_t(hardwareId)^uint32_t(hardwareId>>32);
+  bootStep(2,"Before rtc_timer_init");
+  rtc_timer_init();
+  bootStep(3,"RTC initialized");
+  // Read nRF52840 hardware identifier directly without vendor getID().
+  myId=NRF_FICR->DEVICEID[0]^NRF_FICR->DEVICEID[1];
   if(myId==0)myId=1;
   sequence=uint16_t(myId>>16);
 
@@ -383,7 +384,7 @@ void setup() {
   radioReady=true;
   setStatus("ГОТОВО. НАЖМИ КНОПКУ");
   drawScreen(true);
-  Serial.println("STRELA v0.8 MAIN LOOP READY");
+  Serial.println("STRELA v0.9 MAIN LOOP READY");
   digitalWrite(PIN_LED1,!LED_STATE_ON);
 }
 void loop() {
