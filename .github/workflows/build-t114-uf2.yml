@@ -30,6 +30,7 @@ jobs:
           set -euo pipefail
           arduino-cli lib install "Adafruit GFX Library"
           arduino-cli lib install "Adafruit ST7735 and ST7789 Library"
+          arduino-cli lib install "U8g2_for_Adafruit_GFX"
       - name: Compile for Mesh Node T114 (HT-n5262)
         run: |
           set -euo pipefail
@@ -44,7 +45,7 @@ jobs:
           src = list(pathlib.Path('build').glob('*.hex'))
           assert len(src)==1,src
           tool = pathlib.Path.home()/'.arduino15/packages/Heltec_nRF52/hardware/Heltec_nRF52/1.7.0/tools/uf2conv/uf2conv.py'
-          output = pathlib.Path('STRELA_T114_USB_LoRa_v0.6.uf2')
+          output = pathlib.Path('STRELA_T114_USB_LoRa_v0.7.uf2')
           subprocess.run(['python3',str(tool),'-f','0xADA52840','-c','-o',str(output),str(src[0])],check=True)
           data=output.read_bytes()
           assert len(data)%512==0 and len(data)>0
@@ -64,6 +65,6 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: STRELA-T114-USB-LoRa-v0.6-UF2
-          path: STRELA_T114_USB_LoRa_v0.6.uf2
+          name: STRELA-T114-USB-LoRa-v0.7-UF2
+          path: STRELA_T114_USB_LoRa_v0.7.uf2
           if-no-files-found: error
