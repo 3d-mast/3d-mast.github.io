@@ -1,4 +1,4 @@
-// СТРЕЛА v0.7: Heltec Mesh Node T114 (HT-n5262), nRF52840, SX1262
+// СТРЕЛА v0.8: Heltec Mesh Node T114 (HT-n5262), nRF52840, SX1262
 // Тестовый USB CDC -> LoRa P2P мост, без шифрования, GPS и ретрансляции.
 // Кнопка USER (PIN_BUTTON1): новый опрос сети с нулевым счётчиком.
 // СЧЁТЧИК УЗЛОВ = уникальные ID, ответившие на текущий тестовый пакет.
@@ -65,6 +65,9 @@ static bool ledLit=false;
 static uint32_t ledOffAt=0;
 static bool buttonLastRaw=true,buttonStable=true;
 static uint32_t buttonChangedAt=0;
+static bool safeMode=false;
+static bool radioReady=false;
+static uint32_t buttonPressCount=0;
 static bool lastDataValid=false;
 static uint32_t lastDataFrom=0;
 static uint16_t lastDataSeq=0;
@@ -132,11 +135,11 @@ static void drawScreen(bool force=false) {
   tft.fillScreen(ST77XX_BLACK);
   font.setFont(u8g2_font_7x13_t_cyrillic);
   lineAt(5,13,"СТРЕЛА",ST77XX_CYAN);
-  lineAt(175,13,"v0.7",ST77XX_WHITE);
+  lineAt(175,13,"v0.8",ST77XX_WHITE);
   tft.drawFastHLine(0,18,240,ST77XX_BLUE);
 
   font.setFont(u8g2_font_10x20_t_cyrillic);
-  const char *big=online() ? "ОНЛАЙН" : (testPending ? "ОЖИДАНИЕ" : (testScanning ? "ПОИСК" : "ГОТОВО"));
+  const char *big=safeMode ? "ДИАГНОСТИКА" : (online() ? "ОНЛАЙН" : (testPending ? "ОЖИДАНИЕ" : (testScanning ? "ПОИСК" : "ГОТОВО")));
   lineAt(5,42,big,online()?ST77XX_GREEN:ST77XX_YELLOW);
 
   font.setFont(u8g2_font_7x13_t_cyrillic);
@@ -155,7 +158,8 @@ static void drawScreen(bool force=false) {
   }
   font.setForegroundColor(ST77XX_WHITE);
   font.setCursor(5,122);font.print("ВРЕМЯ: ");font.print(sec);font.print(" с");
-  lineAt(144,133,"КНОПКА: ТЕСТ",ST77XX_GREEN);
+  if(safeMode) { font.setForegroundColor(ST77XX_GREEN);font.setCursor(115,133);font.print("КНОПКА:");font.print(buttonPressCount); }
+  else lineAt(127,133,"КНОПКА: ТЕСТ",ST77XX_GREEN);
 }
 static void enterRx() {
   Radio.Rx(0);
@@ -272,7 +276,10 @@ static void pollButton() {
   }
   if(raw!=buttonStable && uint32_t(now-buttonChangedAt)>45) {
     buttonStable=raw;
-    if(!buttonStable)beginTest();
+    if(!buttonStable) {
+      if(safeMode) {++buttonPressCount; setStatus("КНОПКА РАБОТАЕТ");Serial.println("BUTTON OK");}
+      else beginTest();
+    }
   }
 }
 static void finishSerialLine() {
@@ -281,7 +288,7 @@ static void finishSerialLine() {
     setStatus("СЛИШКОМ ДЛИННО");
   } else if(serialLength) {
     if(serialLength==1&&serialBuffer[0]=='?') {
-      Serial.print("STRELA v0.7 NODE=");Serial.print(myId,HEX);
+      Serial.print("STRELA v0.8 NODE=");Serial.print(myId,HEX);
       Serial.print(" NODES=");Serial.println(responderCount);
     } else if(textPending) {
       Serial.println("BUSY");
@@ -305,38 +312,78 @@ static void pollUsb() {
     }
   }
 }
+static void bootStep(uint8_t number, const char *step) {
+  // Last completed stage remains on screen if a radio API blocks execution.
+  tft.fillScreen(ST77XX_BLUE);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setTextSize(2);
+  tft.setCursor(7,5); tft.print("STRELA v0.8");
+  tft.setTextSize(2);
+  tft.setCursor(7,39); tft.print("RADIO STEP:");
+  tft.setTextSize(3);
+  tft.setCursor(7,70); tft.print(number);
+  tft.setTextSize(1);
+  tft.setCursor(7,112); tft.print(step);
+  Serial.print("RADIO STEP ");Serial.print(number);
+  Serial.print(" ");Serial.println(step);
+}
+
 void setup() {
-  pinMode(PIN_LED1,OUTPUT);digitalWrite(PIN_LED1,LED_STATE_ON);
+  // Hold USER while powering on to start safe UI/USB/LED/button diagnostics.
+  pinMode(PIN_LED1,OUTPUT);
+  digitalWrite(PIN_LED1,LED_STATE_ON);
   pinMode(PIN_BUTTON1,INPUT_PULLUP);
+  delay(40);
+  safeMode=(digitalRead(PIN_BUTTON1)==LOW);
   Serial.begin(115200);
-  Serial.println("BOOT 1/4 USB");
+  Serial.println("STRELA v0.8 START");
   startScreen();
-  setStatus("ИНИЦ. ПЛАТЫ");
-  drawScreen(true);
-  Serial.println("BOOT 2/4 BOARD");
+  myId=1;
+  buttonLastRaw=(digitalRead(PIN_BUTTON1)!=LOW);
+  buttonStable=buttonLastRaw;
+  buttonChangedAt=millis();
+  if(safeMode) {
+    setStatus("БЕЗ РАДИО - ТЕСТ");
+    Serial.println("SAFE MODE: HELTEC AND LORA ARE NOT INITIALISED");
+    digitalWrite(PIN_LED1,!LED_STATE_ON);
+    drawScreen(true);
+    return;
+  }
+
+  bootStep(1,"Before boardInit");
   boardInit(false,0,115200);
-  // Reassert TFT power after Heltec board init.
-  pinMode(PIN_TFT_VDD_CTL,OUTPUT);digitalWrite(PIN_TFT_VDD_CTL,TFT_VDD_ENABLE);
-  pinMode(PIN_TFT_LEDA_CTL,OUTPUT);digitalWrite(PIN_TFT_LEDA_CTL,TFT_LEDA_ENABLE);
-  myId=uint32_t(getID())^uint32_t(getID()>>32);
+  bootStep(2,"After boardInit");
+  pinMode(PIN_TFT_VDD_CTL,OUTPUT);
+  digitalWrite(PIN_TFT_VDD_CTL,TFT_VDD_ENABLE);
+  pinMode(PIN_TFT_LEDA_CTL,OUTPUT);
+  digitalWrite(PIN_TFT_LEDA_CTL,TFT_LEDA_ENABLE);
+  bootStep(3,"Before getID");
+  const uint64_t hardwareId=getID();
+  myId=uint32_t(hardwareId)^uint32_t(hardwareId>>32);
   if(myId==0)myId=1;
   sequence=uint16_t(myId>>16);
-  setStatus("ИНИЦ. РАДИО");
-  drawScreen(true);
-  Serial.println("BOOT 3/4 RADIO");
+
   events.TxDone=onTxDone;
   events.TxTimeout=onTxTimeout;
   events.RxDone=onRxDone;
   events.RxTimeout=onRxTimeout;
   events.RxError=onRxError;
+
+  bootStep(4,"Before Radio.Init");
   Radio.Init(&events);
+  bootStep(5,"Before SetChannel");
   Radio.SetChannel(RF_HZ);
+  bootStep(6,"Before SetTxConfig");
   Radio.SetTxConfig(MODEM_LORA,TX_DBM,0,0,7,1,8,false,true,0,0,false,3000);
+  bootStep(7,"Before SetRxConfig");
   Radio.SetRxConfig(MODEM_LORA,0,7,1,0,8,0,false,0,true,0,0,false,true);
+  bootStep(8,"Before Radio.Rx");
   enterRx();
+  bootStep(9,"Radio setup finished");
+  radioReady=true;
   setStatus("ГОТОВО. НАЖМИ КНОПКУ");
   drawScreen(true);
-  Serial.println("BOOT 4/4 READY STRELA v0.7");
+  Serial.println("STRELA v0.8 MAIN LOOP READY");
   digitalWrite(PIN_LED1,!LED_STATE_ON);
 }
 void loop() {
@@ -356,6 +403,8 @@ void loop() {
     else setStatus("НЕТ ОТВЕТА");
   }
   drawScreen();
+  if(safeMode) return;
+  if(!radioReady) return;
   Radio.IrqProcess();
   if(radioBusy)return;
 
