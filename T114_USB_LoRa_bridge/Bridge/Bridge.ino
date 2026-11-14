@@ -42,6 +42,7 @@ static uint16_t lastRxSeq=0;
 static uint8_t packet[HEADER+MAX_TEXT]={};
 static bool ledActive=false;
 static uint32_t ledOffAt=0;
+static uint32_t idleHeartbeatAt=0;
 
 // Built-in ST7789 TFT on Mesh Node T114 (HT-n5262), 240x135 landscape.
 static Adafruit_ST7789 display(&SPI1, PIN_TFT_CS, PIN_TFT_DC, PIN_TFT_RST);
@@ -97,7 +98,7 @@ static void drawDisplay() {
   display.setCursor(5, 4); display.print("STRELA");
   display.setTextSize(1);
   display.setTextColor(ST77XX_WHITE);
-  display.setCursor(129, 11); display.print("T114  v0.4");
+  display.setCursor(129, 11); display.print("T114  v0.6");
   display.drawFastHLine(0, 27, 240, ST77XX_BLUE);
 
   display.setCursor(5, 35);
@@ -201,7 +202,7 @@ static void onRxDone(uint8_t*buf,uint16_t size,int16_t rssi,int8_t snr){
 }
 static void submitLine(){
   if(!lineTooLong && serialLen==1 && serialLine[0]=='?'){
-    Serial.print("STRELA v0.4 READY 868100000 Hz NODE=");
+    Serial.print("STRELA v0.6 READY 868100000 Hz NODE=");
     Serial.println(nodeId, HEX);
     setEvent("USB STATUS OK");
   }
@@ -234,20 +235,33 @@ static void pollSerial(){
   }
 }
 void setup(){
-  boardInit(false,0,115200);
+  // Proven boot ordering from v0.5 BootDiag: light/display/USB first.
+  pinMode(PIN_LED1,OUTPUT);
+  digitalWrite(PIN_LED1,LED_STATE_ON);
   Serial.begin(115200);
-  Serial.println("BOOT 1/4: MCU");
-  pinMode(PIN_LED1,OUTPUT);digitalWrite(PIN_LED1,LED_STATE_ON);
+  Serial.println("BOOT 1/5: MCU/USB");
   initDisplay();
-  Serial.println("BOOT 2/4: LCD INITIALISED");
+  Serial.println("BOOT 2/5: LCD INITIALISED");
+  setEvent("LCD OK / PRE-RADIO");
+  drawDisplay(); // Remains visible if board or radio initialisation fails.
   digitalWrite(PIN_LED1,!LED_STATE_ON);
+
+  Serial.println("BOOT 3/5: HELTEC BOARD");
+  boardInit(false,0,115200);
+  // Reinstate display supply after Heltec board setup if pin modes changed.
+  pinMode(PIN_TFT_VDD_CTL, OUTPUT);
+  pinMode(PIN_TFT_LEDA_CTL, OUTPUT);
+  digitalWrite(PIN_TFT_VDD_CTL, TFT_VDD_ENABLE);
+  digitalWrite(PIN_TFT_LEDA_CTL, TFT_LEDA_ENABLE);
+  Serial.println("HELTEC BOARD DONE");
+
   const uint64_t id=getID();
   nodeId=uint32_t(id) ^ uint32_t(id>>32);
   if(nodeId==0)nodeId=1;
   nextSeq=uint16_t(id>>16);
-  setEvent("STARTING RADIO");
-  drawDisplay(); // Must appear even if SX1262 initialisation stalls.
-  Serial.println("BOOT 3/4: RADIO");
+  setEvent("INIT SX1262");
+  drawDisplay();
+  Serial.println("BOOT 4/5: RADIO");
   radioEvents.TxDone=onTxDone;
   radioEvents.TxTimeout=onTxTimeout;
   radioEvents.RxDone=onRxDone;
@@ -259,8 +273,8 @@ void setup(){
   Radio.SetTxConfig(MODEM_LORA,TX_DBM,0,0,7,1,8,false,true,0,0,false,3000);
   Radio.SetRxConfig(MODEM_LORA,0,7,1,0,8,0,false,0,true,0,0,false,true);
   startRx();
-  Serial.println("BOOT 4/4: READY");
-  Serial.println("T114 USB-LORA v0.4 READY 868.100 MHz P2P");
+  Serial.println("BOOT 5/5: READY");
+  Serial.println("T114 USB-LORA v0.6 READY 868.100 MHz P2P");
   setEvent("LISTENING");
   drawDisplay();
 }
@@ -268,6 +282,10 @@ void loop(){
   Radio.IrqProcess();
   pollSerial();
   drawDisplay();
+  if(!ledActive && uint32_t(millis()-idleHeartbeatAt)>=2000){
+    idleHeartbeatAt=millis();
+    flashLed(); // 2-second heartbeat confirms firmware is still running
+  }
   if(ledActive && int32_t(millis()-ledOffAt)>=0){
     digitalWrite(PIN_LED1,!LED_STATE_ON);ledActive=false;
   }
