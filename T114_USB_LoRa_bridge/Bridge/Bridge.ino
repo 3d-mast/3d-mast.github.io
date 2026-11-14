@@ -37,7 +37,7 @@ static bool lastRxValid=false;
 static uint32_t lastRxFrom=0;
 static uint16_t lastRxSeq=0;
 static uint8_t packet[HEADER+MAX_TEXT]={};
-static bool ledOn=false;
+static bool ledActive=false;
 static uint32_t ledOffAt=0;
 
 static uint32_t u32(const uint8_t*p) {
@@ -48,7 +48,7 @@ static void put32(uint8_t*p,uint32_t v){for(unsigned i=0;i<4;i++)p[i]=uint8_t(v>
 static void put16(uint8_t*p,uint16_t v){p[0]=uint8_t(v);p[1]=uint8_t(v>>8);}
 static void flashLed(){
   digitalWrite(PIN_LED1,LED_STATE_ON);
-  ledOn=true; ledOffAt=millis()+LED_FLASH_MS;
+  ledActive=true; ledOffAt=millis()+LED_FLASH_MS;
 }
 static void startRx(){Radio.Rx(0);}
 static void sendFrame(uint8_t type,uint32_t target,uint16_t seq,const uint8_t*data,uint8_t len){
@@ -146,8 +146,8 @@ void setup(){
 void loop(){
   Radio.IrqProcess();
   pollSerial();
-  if(ledOn && int32_t(millis()-ledOffAt)>=0){
-    digitalWrite(PIN_LED1,!LED_STATE_ON);ledOn=false;
+  if(ledActive && int32_t(millis()-ledOffAt)>=0){
+    digitalWrite(PIN_LED1,!LED_STATE_ON);ledActive=false;
   }
   if(sending)return;
 
