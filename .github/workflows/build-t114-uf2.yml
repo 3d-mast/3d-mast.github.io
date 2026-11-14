@@ -1,0 +1,80 @@
+name: Build T114 USB LoRa UF2
+on:
+  push:
+    branches: [work/t114-usb-lora-uf2]
+    paths:
+      - 'T114_USB_LoRa_bridge/**'
+      - '.github/workflows/build-t114-uf2.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'T114_USB_LoRa_bridge/**'
+      - '.github/workflows/build-t114-uf2.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Install official Heltec nRF52 1.7.0 platform
+        run: |
+          set -euo pipefail
+          INDEX='https://github.com/HelTecAutomation/Heltec_nRF52/releases/download/1.7.0/package_heltec_nrf_index.json'
+          arduino-cli core update-index --additional-urls "$INDEX"
+          arduino-cli core install Heltec_nRF52:Heltec_nRF52@1.7.0 --additional-urls "$INDEX"
+      - name: Compile for Mesh Node T114 (HT-n5262)
+        run: |
+          set -euo pipefail
+          arduino-cli compile --fqbn Heltec_nRF52:Heltec_nRF52:HT-n5262 --output-dir "$GITHUB_WORKSPACE/build" --warnings all T114_USB_LoRa_bridge/Bridge
+          ls -lah build
+      - name: Convert firmware HEX to S140v6 nRF52840 UF2 and validate blocks
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, struct
+          hexes=list(pathlib.Path('build').glob('*.hex'))
+          assert len(hexes)==1, f'Expected one .hex, got {hexes}'
+          mem={}
+          ext=0
+          for line in hexes[0].read_text().splitlines():
+              assert line.startswith(':'), 'Not Intel HEX'
+              b=bytes.fromhex(line[1:])
+              assert (sum(b)&255)==0, 'HEX checksum error'
+              size=b[0]; off=int.from_bytes(b[1:3],'big'); rtype=b[3]; data=b[4:4+size]
+              if rtype==0:
+                  for i,v in enumerate(data):
+                      addr=ext+off+i
+                      assert 0x26000<=addr<0xED000, f'Outside app partition: {addr:#x}'
+                      assert addr not in mem or mem[addr]==v, 'Conflicting HEX address'
+                      mem[addr]=v
+              elif rtype==4:
+                  assert size==2
+                  ext=int.from_bytes(data,'big')<<16
+              elif rtype==2:
+                  assert size==2
+                  ext=int.from_bytes(data,'big')<<4
+              elif rtype==1:
+                  break
+          assert mem, 'No application data'
+          assert min(mem)==0x26000, f'Unexpected app origin: {min(mem):#x}'
+          addrs=sorted({addr&~255 for addr in mem})
+          uf=bytearray()
+          for idx,base in enumerate(addrs):
+              data=bytes(mem.get(base+i,255) for i in range(256))
+              header=struct.pack('<8I',0x0A324655,0x9E5D5157,0x2000,base,256,idx,len(addrs),0xADA52840)
+              block=header+data+b'\x00'*(512-32-256-4)+struct.pack('<I',0x0AB16F30)
+              assert len(block)==512
+              uf.extend(block)
+          output=pathlib.Path('T114_USB_LoRa_bridge_v0.2.uf2')
+          output.write_bytes(uf)
+          assert len(uf)==len(addrs)*512
+          print('VALID UF2',len(addrs),'blocks,',len(uf),'bytes, first',hex(addrs[0]),'last',hex(addrs[-1]))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: T114-USB-LoRa-v0.2-UF2
+          path: T114_USB_LoRa_bridge_v0.2.uf2
+          if-no-files-found: error
