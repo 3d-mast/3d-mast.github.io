@@ -28,7 +28,7 @@ jobs:
       - name: Compile for Mesh Node T114 (HT-n5262)
         run: |
           set -euo pipefail
-          arduino-cli compile --fqbn Heltec_nRF52:Heltec_nRF52:HT-n5262 --output-dir "$GITHUB_WORKSPACE/build" --warnings all T114_USB_LoRa_bridge/Bridge
+          arduino-cli compile --build-property 'recipe.objcopy.uf2.pattern=/usr/bin/true' --build-property 'recipe.objcopy.zip.pattern=/usr/bin/true' --fqbn Heltec_nRF52:Heltec_nRF52:HT-n5262 --output-dir "$GITHUB_WORKSPACE/build" --warnings all T114_USB_LoRa_bridge/Bridge
           ls -lah build
       - name: Convert firmware HEX to S140v6 nRF52840 UF2 and validate blocks
         run: |
