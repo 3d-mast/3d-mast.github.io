@@ -1,4 +1,4 @@
-// СТРЕЛА v1.2: Heltec Mesh Node T114 (HT-n5262), nRF52840, SX1262
+// СТРЕЛА v1.3: Heltec Mesh Node T114 (HT-n5262), nRF52840, SX1262
 // Тестовый USB CDC -> LoRa P2P мост, без шифрования, GPS и ретрансляции.
 // Кнопка USER (PIN_BUTTON1): новый опрос сети с нулевым счётчиком.
 // СЧЁТЧИК УЗЛОВ = уникальные ID, ответившие на текущий тестовый пакет.
@@ -63,18 +63,19 @@ static bool lastUsbState=false;
 static bool screenInitialised=false;
 static bool lastOnlineDrawn=false;
 static bool lastButtonDrawn=true;
+static bool lastButtonBDrawn=true;
 static uint32_t lastPressDrawn=UINT32_MAX;
 static uint32_t nextHeartbeat=0;
 static bool ledLit=false;
 static uint32_t ledOffAt=0;
-static bool buttonLastRaw=true,buttonStable=true;
-static uint32_t buttonChangedAt=0;
+static bool keyLastRaw[2]={true,true};
+static bool keyStable[2]={true,true};
+static uint32_t keyChangedAt[2]={0,0};
 static bool safeMode=true; // Start UI + button diagnostics with radio entirely disabled
 static bool radioReady=false;
 static bool radioStartRequested=false;
 static uint32_t buttonPressCount=0;
-static uint32_t buttonPressedAt=0;
-static bool buttonLongHandled=false;
+static const uint8_t keyPins[2]={PIN_BUTTON1,PIN_BUTTON2}; // A=42, B=11
 static bool lastDataValid=false;
 static uint32_t lastDataFrom=0;
 static uint16_t lastDataSeq=0;
@@ -124,7 +125,7 @@ static void startScreen() {
   font.print("СТРЕЛА");
   font.setFont(u8g2_font_7x13_t_cyrillic);
   font.setCursor(12,82);
-  font.print("ЗАГРУЗКА v1.2");
+  font.print("ЗАГРУЗКА v1.3");
   digitalWrite(PIN_TFT_LEDA_CTL,TFT_LEDA_ENABLE);
   delay(400);
 }
@@ -137,13 +138,14 @@ static void drawScreen(bool force=false) {
   const uint32_t now=millis(),sec=now/1000;
   const bool usb=bool(Serial);
   const bool isOnline=online();
-  const bool buttonReleased=(NRF_P1->IN & (1UL<<10))!=0; // direct hardware GPIO read
+  const bool buttonReleased=(digitalRead(PIN_BUTTON1)!=LOW);
+  const bool buttonBReleased=(digitalRead(PIN_BUTTON2)!=LOW);
 
   if(force || !screenInitialised) {
     tft.fillScreen(ST77XX_BLACK);
     font.setFont(u8g2_font_7x13_t_cyrillic);
     lineAt(5,13,"СТРЕЛА",ST77XX_CYAN);
-    lineAt(175,13,"v1.2",ST77XX_WHITE);
+    lineAt(175,13,"v1.3",ST77XX_WHITE);
     tft.drawFastHLine(0,18,240,ST77XX_BLUE);
     screenInitialised=true;
     screenDirty=true;
@@ -169,7 +171,7 @@ static void drawScreen(bool force=false) {
     font.setCursor(5,61);font.print("УЗЛОВ: ");font.print(responderCount);
     font.setCursor(115,61);font.print("TX:");font.print(txPackets);
     font.print(" RX:");font.print(rxPackets);
-    lineAt(5,77,radioReady?"ЧАСТОТА: 868.100 МГц":"ДОЛГО ДЕРЖИ: РАДИО",ST77XX_YELLOW);
+    lineAt(5,77,radioReady?"ЧАСТОТА: 868.100 МГц":"ПРОВЕРКА КНОПОК A И B",ST77XX_YELLOW);
     lineAt(5,93,statusText,ST77XX_WHITE);
     font.setForegroundColor(ST77XX_CYAN);
     font.setCursor(5,108);font.print("USB:");font.print(usb?"ДА":"НЕТ");
@@ -187,13 +189,16 @@ static void drawScreen(bool force=false) {
     font.setCursor(5,128);font.print("ВРЕМЯ: ");font.print(sec);font.print("с");
   }
   if(force || detailChanged || buttonReleased!=lastButtonDrawn ||
-     buttonPressCount!=lastPressDrawn) {
-    lastButtonDrawn=buttonReleased;lastPressDrawn=buttonPressCount;
+     buttonBReleased!=lastButtonBDrawn || buttonPressCount!=lastPressDrawn) {
+    lastButtonDrawn=buttonReleased;
+    lastButtonBDrawn=buttonBReleased;
+    lastPressDrawn=buttonPressCount;
     tft.fillRect(133,113,107,22,ST77XX_BLACK);
     font.setFont(u8g2_font_7x13_t_cyrillic);
-    font.setForegroundColor(buttonReleased?ST77XX_WHITE:ST77XX_GREEN);
+    font.setForegroundColor(ST77XX_CYAN);
     font.setCursor(135,128);
-    font.print("КН:");font.print(buttonReleased?"1":"0");
+    font.print("A");font.print(buttonReleased?"1":"0");
+    font.print(" B");font.print(buttonBReleased?"1":"0");
     font.print(" #");font.print(buttonPressCount);
   }
 }
@@ -306,38 +311,32 @@ static void beginTest() {
   Serial.print("TEST START #");Serial.println(testSeq);
 }
 static void pollButton() {
-  // No USER interrupt: Heltec's LoRa driver also relies on GPIO interrupts.
-  // This polls the physical nRF52840 P1.10 register every loop iteration.
+  // Pure polling on BOTH official T114 buttons (A=42, B=11).
+  // No GPIO IRQ handlers. Never launch radio merely by holding a key.
   const uint32_t now=millis();
-  const bool released=(NRF_P1->IN & (1UL<<10))!=0;
-  if(released!=buttonLastRaw) {
-    buttonLastRaw=released;
-    buttonChangedAt=now;
-    screenDirty=true;
-    Serial.print("GPIO42: ");Serial.println(released?"HIGH":"LOW");
-  }
-  if(released!=buttonStable && uint32_t(now-buttonChangedAt)>=35) {
-    buttonStable=released;
-    if(!released) {
-      buttonPressedAt=now;
-      buttonLongHandled=false;
-    } else if(!buttonLongHandled) {
-      // Short press is counted on release so it cannot also start the radio.
-      ++buttonPressCount; screenDirty=true;
-      Serial.print("BUTTON SHORT #");Serial.println(buttonPressCount);
-      if(radioReady) beginTest();
-      else setStatus("КНОПКА РАБОТАЕТ");
+  for(uint8_t i=0;i<2;i++) {
+    const bool released=(digitalRead(keyPins[i])!=LOW);
+    if(released!=keyLastRaw[i]) {
+      keyLastRaw[i]=released;
+      keyChangedAt[i]=now;
+      screenDirty=true;
+      Serial.print("RAW KEY ");
+      Serial.print(i==0?"A":"B");
+      Serial.println(released?" RELEASED":" PRESSED");
     }
-  }
-  if(!buttonStable && !buttonLongHandled &&
-     uint32_t(now-buttonPressedAt)>=1500) {
-    buttonLongHandled=true;
-    ++buttonPressCount; screenDirty=true;
-    Serial.println("BUTTON LONG: start radio");
-    if(!radioReady) {
-      radioStartRequested=true;
-      setStatus("ВКЛЮЧАЕМ РАДИО");
-    } else setStatus("РАДИО УЖЕ ВКЛЮЧЕНО");
+    if(released!=keyStable[i] && uint32_t(now-keyChangedAt[i])>=35) {
+      keyStable[i]=released;
+      if(!released) {
+        ++buttonPressCount;
+        screenDirty=true;
+        if(i==0)setStatus("КНОПКА A РАБОТАЕТ");
+        else setStatus("КНОПКА B РАБОТАЕТ");
+        Serial.print("BUTTON ");
+        Serial.print(i==0?"A":"B");
+        Serial.print(" #");Serial.println(buttonPressCount);
+        if(radioReady)beginTest();
+      }
+    }
   }
 }
 static void finishSerialLine() {
@@ -360,7 +359,7 @@ static void finishSerialLine() {
         Serial.println("BUTTON SIMULATED; RADIO OFF");
       }
     } else if(serialLength==1&&serialBuffer[0]=='?') {
-      Serial.print("STRELA v1.2 NODE=");Serial.print(myId,HEX);
+      Serial.print("STRELA v1.3 NODE=");Serial.print(myId,HEX);
       Serial.print(" NODES=");Serial.println(responderCount);
     } else if(textPending) {
       Serial.println("BUSY");
@@ -389,7 +388,7 @@ static void bootStep(uint8_t number, const char *step) {
   tft.fillScreen(ST77XX_BLUE);
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
-  tft.setCursor(7,5); tft.print("STRELA v1.2");
+  tft.setCursor(7,5); tft.print("STRELA v1.3");
   tft.setTextSize(2);
   tft.setCursor(7,39); tft.print("RADIO STEP:");
   tft.setTextSize(3);
@@ -437,26 +436,27 @@ static void startRadio() {
   setStatus("РАДИО ГОТОВО");
   screenInitialised=false; // Restore original UI after boot-step screen
   drawScreen(true);
-  Serial.println("STRELA v1.2 RADIO READY");
+  Serial.println("STRELA v1.3 RADIO READY");
 }
 
 void setup() {
   pinMode(PIN_LED1,OUTPUT);
   digitalWrite(PIN_LED1,!LED_STATE_ON);
-  pinMode(PIN_BUTTON1,INPUT_PULLUP); // nRF52 P1.10 / Arduino pin 42, active LOW
+  pinMode(PIN_BUTTON1,INPUT_PULLUP); // T114 button A, P1.10 (pin 42), active LOW
+  pinMode(PIN_BUTTON2,INPUT_PULLUP); // T114 button B, P0.11 (pin 11), active LOW
   Serial.begin(115200);
-  Serial.println("STRELA v1.2 DIAGNOSTIC BOOT: RADIO OFF");
+  Serial.println("STRELA v1.3 DIAGNOSTIC BOOT: RADIO OFF");
   startScreen();
-  buttonLastRaw=(NRF_P1->IN & (1UL<<10))!=0;
-  buttonStable=buttonLastRaw;
-  buttonChangedAt=millis();
-  buttonPressedAt=millis();
-  buttonLongHandled=false;
+  for(uint8_t i=0;i<2;i++) {
+    keyLastRaw[i]=(digitalRead(keyPins[i])!=LOW);
+    keyStable[i]=keyLastRaw[i];
+    keyChangedAt[i]=millis();
+  }
   safeMode=true;
   radioReady=false;
-  setStatus("КОРОТКО: КНОПКА");
+  setStatus("НАЖМИ A ИЛИ B");
   drawScreen(true);
-  Serial.println("SHORT=BUTTON TEST, LONG=RADIO ON, USB R=RADIO ON");
+  Serial.println("A=GPIO42 B=GPIO11; RADIO OFF UNTIL USB R COMMAND");
 }
 void loop() {
   const uint32_t now=millis();
