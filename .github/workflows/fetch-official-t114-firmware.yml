@@ -1,0 +1,43 @@
+name: Download official T114 firmware binaries
+on:
+  push:
+    branches: [work/t114-usb-lora-uf2]
+    paths: ['.github/workflows/fetch-official-t114-firmware.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fetch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Download official release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p firmware
+          curl -fsSL --retry 3 -o firmware/MeshCore_T114_BLE_v1.18.0.uf2 \
+            'https://github.com/meshcore-dev/MeshCore/releases/download/companion-v1.18.0/Heltec_t114_companion_radio_ble-v1.18.0-81dbae5.uf2'
+          curl -fsSL --retry 3 -o firmware/MeshCore_T114_USB_v1.18.0.uf2 \
+            'https://github.com/meshcore-dev/MeshCore/releases/download/companion-v1.18.0/Heltec_t114_companion_radio_usb-v1.18.0-81dbae5.uf2'
+          curl -fsSL --retry 3 -o firmware/RNode_T114_v1.86_DFU.zip \
+            'https://github.com/markqvist/RNode_Firmware/releases/download/1.86/rnode_firmware_heltec_t114.zip'
+          echo '49a2d31841d5f7cc678a81d597e2c99b4400041f6ecf26f22ba922e670816a22  firmware/RNode_T114_v1.86_DFU.zip' | sha256sum -c -
+          python3 - <<'PY'
+          import struct, pathlib, zipfile
+          for name in ('MeshCore_T114_BLE_v1.18.0.uf2','MeshCore_T114_USB_v1.18.0.uf2'):
+              p=pathlib.Path('firmware')/name
+              b=p.read_bytes(); assert len(b)>200000 and len(b)%512==0,(name,len(b))
+              first=struct.unpack_from('<8I',b,0)
+              assert first[0]==0x0A324655 and first[1]==0x9E5D5157,first
+              print(name,len(b),'bytes',hex(first[3]))
+          with zipfile.ZipFile('firmware/RNode_T114_v1.86_DFU.zip') as z:
+              bad=z.testzip(); assert bad is None,bad
+              print('RNode package:',z.namelist())
+          PY
+          sha256sum firmware/* > firmware/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Official-T114-MeshCore-RNode-binaries
+          path: firmware/
+          if-no-files-found: error
