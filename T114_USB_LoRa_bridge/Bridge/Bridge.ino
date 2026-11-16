@@ -1,4 +1,4 @@
-// СТРЕЛА v0.9: Heltec Mesh Node T114 (HT-n5262), nRF52840, SX1262
+// СТРЕЛА v1.0: Heltec Mesh Node T114 (HT-n5262), nRF52840, SX1262
 // Тестовый USB CDC -> LoRa P2P мост, без шифрования, GPS и ретрансляции.
 // Кнопка USER (PIN_BUTTON1): новый опрос сети с нулевым счётчиком.
 // СЧЁТЧИК УЗЛОВ = уникальные ID, ответившие на текущий тестовый пакет.
@@ -60,6 +60,10 @@ static const char *statusText="СТАРТ";
 static bool screenDirty=true;
 static uint32_t lastDraw=0,lastUptime=0;
 static bool lastUsbState=false;
+static bool screenInitialised=false;
+static bool lastOnlineDrawn=false;
+static bool lastButtonDrawn=true;
+static uint32_t lastPressDrawn=UINT32_MAX;
 static uint32_t nextHeartbeat=0;
 static bool ledLit=false;
 static uint32_t ledOffAt=0;
@@ -117,7 +121,7 @@ static void startScreen() {
   font.print("СТРЕЛА");
   font.setFont(u8g2_font_7x13_t_cyrillic);
   font.setCursor(12,82);
-  font.print("ЗАГРУЗКА v0.9");
+  font.print("ЗАГРУЗКА v1.0");
   digitalWrite(PIN_TFT_LEDA_CTL,TFT_LEDA_ENABLE);
   delay(400);
 }
@@ -128,39 +132,69 @@ static void lineAt(int16_t x,int16_t baseline,const char *text,uint16_t color=ST
 }
 static void drawScreen(bool force=false) {
   const uint32_t now=millis(),sec=now/1000;
-  bool usb=bool(Serial);
-  if(!force && !screenDirty && sec==lastUptime && usb==lastUsbState)return;
-  if(!force && uint32_t(now-lastDraw)<250)return;
-  lastDraw=now;lastUptime=sec;lastUsbState=usb;screenDirty=false;
-  tft.fillScreen(ST77XX_BLACK);
-  font.setFont(u8g2_font_7x13_t_cyrillic);
-  lineAt(5,13,"СТРЕЛА",ST77XX_CYAN);
-  lineAt(175,13,"v0.9",ST77XX_WHITE);
-  tft.drawFastHLine(0,18,240,ST77XX_BLUE);
+  const bool usb=bool(Serial);
+  const bool isOnline=online();
+  const bool buttonReleased=(digitalRead(PIN_BUTTON1)!=LOW);
 
-  font.setFont(u8g2_font_10x20_t_cyrillic);
-  const char *big=safeMode ? "ДИАГНОСТИКА" : (online() ? "ОНЛАЙН" : (testPending ? "ОЖИДАНИЕ" : (testScanning ? "ПОИСК" : "ГОТОВО")));
-  lineAt(5,42,big,online()?ST77XX_GREEN:ST77XX_YELLOW);
-
-  font.setFont(u8g2_font_7x13_t_cyrillic);
-  font.setForegroundColor(ST77XX_WHITE);
-  font.setCursor(5,61);font.print("УЗЛОВ: ");font.print(responderCount);
-  font.setCursor(115,61);font.print("TX:");font.print(txPackets);
-  font.print(" RX:");font.print(rxPackets);
-
-  lineAt(5,77,"ЧАСТОТА: 868.100 МГц",ST77XX_YELLOW);
-  lineAt(5,93,statusText,ST77XX_WHITE);
-
-  font.setForegroundColor(ST77XX_CYAN);
-  font.setCursor(5,108);font.print("USB:");font.print(usb?"ДА":"НЕТ");
-  if(signalSeen){
-    font.setCursor(92,108);font.print("RSSI:");font.print(lastRssi);
+  if(force || !screenInitialised) {
+    tft.fillScreen(ST77XX_BLACK);
+    font.setFont(u8g2_font_7x13_t_cyrillic);
+    lineAt(5,13,"СТРЕЛА",ST77XX_CYAN);
+    lineAt(175,13,"v1.0",ST77XX_WHITE);
+    tft.drawFastHLine(0,18,240,ST77XX_BLUE);
+    screenInitialised=true;
+    screenDirty=true;
   }
-  font.setForegroundColor(ST77XX_WHITE);
-  font.setCursor(5,122);font.print("ВРЕМЯ: ");font.print(sec);font.print(" с");
-  if(safeMode) { font.setForegroundColor(ST77XX_GREEN);font.setCursor(115,133);font.print("КНОПКА:");font.print(buttonPressCount); }
-  else lineAt(127,133,"КНОПКА: ТЕСТ",ST77XX_GREEN);
+  if(!force && uint32_t(now-lastDraw)<100)return;
+  lastDraw=now;
+
+  // Only redraw the upper data region when status really changes.
+  // No more fillScreen() for every uptime second.
+  const bool detailChanged=screenDirty || usb!=lastUsbState || isOnline!=lastOnlineDrawn;
+  if(detailChanged) {
+    screenDirty=false;
+    lastUsbState=usb;
+    lastOnlineDrawn=isOnline;
+    tft.fillRect(0,20,240,91,ST77XX_BLACK);
+    font.setFont(u8g2_font_10x20_t_cyrillic);
+    const char *big=safeMode ? "ДИАГНОСТИКА" :
+      (isOnline ? "ОНЛАЙН" :
+      (testPending ? "ОЖИДАНИЕ" : (testScanning ? "ПОИСК" : "ГОТОВО")));
+    lineAt(5,42,big,isOnline?ST77XX_GREEN:ST77XX_YELLOW);
+    font.setFont(u8g2_font_7x13_t_cyrillic);
+    font.setForegroundColor(ST77XX_WHITE);
+    font.setCursor(5,61);font.print("УЗЛОВ: ");font.print(responderCount);
+    font.setCursor(115,61);font.print("TX:");font.print(txPackets);
+    font.print(" RX:");font.print(rxPackets);
+    lineAt(5,77,"ЧАСТОТА: 868.100 МГц",ST77XX_YELLOW);
+    lineAt(5,93,statusText,ST77XX_WHITE);
+    font.setForegroundColor(ST77XX_CYAN);
+    font.setCursor(5,108);font.print("USB:");font.print(usb?"ДА":"НЕТ");
+    if(signalSeen) {
+      font.setCursor(92,108);font.print("RSSI:");font.print(lastRssi);
+    }
+  }
+
+  // Two small rectangles only: uptime and raw button status.
+  if(force || detailChanged || sec!=lastUptime) {
+    lastUptime=sec;
+    tft.fillRect(0,113,133,22,ST77XX_BLACK);
+    font.setFont(u8g2_font_7x13_t_cyrillic);
+    font.setForegroundColor(ST77XX_WHITE);
+    font.setCursor(5,128);font.print("ВРЕМЯ: ");font.print(sec);font.print("с");
+  }
+  if(force || detailChanged || buttonReleased!=lastButtonDrawn ||
+     buttonPressCount!=lastPressDrawn) {
+    lastButtonDrawn=buttonReleased;lastPressDrawn=buttonPressCount;
+    tft.fillRect(133,113,107,22,ST77XX_BLACK);
+    font.setFont(u8g2_font_7x13_t_cyrillic);
+    font.setForegroundColor(buttonReleased?ST77XX_WHITE:ST77XX_GREEN);
+    font.setCursor(135,128);
+    font.print("КН:");font.print(buttonReleased?"1":"0");
+    font.print(" #");font.print(buttonPressCount);
+  }
 }
+
 static void enterRx() {
   Radio.Rx(0);
 }
@@ -273,11 +307,15 @@ static void pollButton() {
   const uint32_t now=millis();
   if(raw!=buttonLastRaw) {
     buttonLastRaw=raw;buttonChangedAt=now;
+    screenDirty=true;
+    Serial.print("GPIO42=");Serial.println(raw?1:0);
   }
   if(raw!=buttonStable && uint32_t(now-buttonChangedAt)>45) {
     buttonStable=raw;
     if(!buttonStable) {
-      if(safeMode) {++buttonPressCount; setStatus("КНОПКА РАБОТАЕТ");Serial.println("BUTTON OK");}
+      ++buttonPressCount;
+      Serial.print("BUTTON PRESSED #");Serial.println(buttonPressCount);
+      if(safeMode) {setStatus("КНОПКА РАБОТАЕТ");}
       else beginTest();
     }
   }
@@ -287,8 +325,13 @@ static void finishSerialLine() {
     Serial.println("ERR too long (64 bytes max)");
     setStatus("СЛИШКОМ ДЛИННО");
   } else if(serialLength) {
-    if(serialLength==1&&serialBuffer[0]=='?') {
-      Serial.print("STRELA v0.9 NODE=");Serial.print(myId,HEX);
+    if(serialLength==1&&serialBuffer[0]=='!') {
+      ++buttonPressCount;
+      Serial.println("USB TEST TRIGGER");
+      if(safeMode)setStatus("БЕЗ РАДИО - ТЕСТ");
+      else beginTest();
+    } else if(serialLength==1&&serialBuffer[0]=='?') {
+      Serial.print("STRELA v1.0 NODE=");Serial.print(myId,HEX);
       Serial.print(" NODES=");Serial.println(responderCount);
     } else if(textPending) {
       Serial.println("BUSY");
@@ -317,7 +360,7 @@ static void bootStep(uint8_t number, const char *step) {
   tft.fillScreen(ST77XX_BLUE);
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
-  tft.setCursor(7,5); tft.print("STRELA v0.9");
+  tft.setCursor(7,5); tft.print("STRELA v1.0");
   tft.setTextSize(2);
   tft.setCursor(7,39); tft.print("RADIO STEP:");
   tft.setTextSize(3);
@@ -332,11 +375,11 @@ void setup() {
   // Hold USER while powering on to start safe UI/USB/LED/button diagnostics.
   pinMode(PIN_LED1,OUTPUT);
   digitalWrite(PIN_LED1,LED_STATE_ON);
-  pinMode(PIN_BUTTON1,INPUT_PULLUP);
+  pinMode(PIN_BUTTON1,INPUT); // Official Heltec factory test uses GPIO42 INPUT
   delay(40);
   safeMode=(digitalRead(PIN_BUTTON1)==LOW);
   Serial.begin(115200);
-  Serial.println("STRELA v0.9 START");
+  Serial.println("STRELA v1.0 START");
   startScreen();
   myId=1;
   buttonLastRaw=(digitalRead(PIN_BUTTON1)!=LOW);
@@ -384,7 +427,7 @@ void setup() {
   radioReady=true;
   setStatus("ГОТОВО. НАЖМИ КНОПКУ");
   drawScreen(true);
-  Serial.println("STRELA v0.9 MAIN LOOP READY");
+  Serial.println("STRELA v1.0 MAIN LOOP READY");
   digitalWrite(PIN_LED1,!LED_STATE_ON);
 }
 void loop() {
@@ -394,10 +437,7 @@ void loop() {
   if(ledLit && int32_t(now-ledOffAt)>=0) {
     digitalWrite(PIN_LED1,!LED_STATE_ON);ledLit=false;
   }
-  if(!ledLit && int32_t(now-nextHeartbeat)>=0) {
-    nextHeartbeat=now+2000UL;
-    markLed();
-  }
+  // No periodic LED flash: LED now signals only RF TX/RX.
   if(testScanning && int32_t(now-testDeadline)>=0) {
     testScanning=false;
     if(responderCount) setStatus("ТЕСТ ЗАВЕРШЁН");
