@@ -1,4 +1,4 @@
-// СТРЕЛА v1.0: Heltec Mesh Node T114 (HT-n5262), nRF52840, SX1262
+// СТРЕЛА v1.1: Heltec Mesh Node T114 (HT-n5262), nRF52840, SX1262
 // Тестовый USB CDC -> LoRa P2P мост, без шифрования, GPS и ретрансляции.
 // Кнопка USER (PIN_BUTTON1): новый опрос сети с нулевым счётчиком.
 // СЧЁТЧИК УЗЛОВ = уникальные ID, ответившие на текущий тестовый пакет.
@@ -72,6 +72,13 @@ static uint32_t buttonChangedAt=0;
 static bool safeMode=false;
 static bool radioReady=false;
 static uint32_t buttonPressCount=0;
+static volatile uint32_t buttonFallingEdges=0;
+static uint32_t buttonEdgesObserved=0;
+static uint32_t buttonActionAt=0;
+// GPIO P1.10 is Arduino pin 42 on both Heltec T114 variants.
+static void onUserButtonInterrupt() {
+  ++buttonFallingEdges; // no drawing, radio or USB calls in an interrupt
+}
 static bool lastDataValid=false;
 static uint32_t lastDataFrom=0;
 static uint16_t lastDataSeq=0;
@@ -121,7 +128,7 @@ static void startScreen() {
   font.print("СТРЕЛА");
   font.setFont(u8g2_font_7x13_t_cyrillic);
   font.setCursor(12,82);
-  font.print("ЗАГРУЗКА v1.0");
+  font.print("ЗАГРУЗКА v1.1");
   digitalWrite(PIN_TFT_LEDA_CTL,TFT_LEDA_ENABLE);
   delay(400);
 }
@@ -134,13 +141,13 @@ static void drawScreen(bool force=false) {
   const uint32_t now=millis(),sec=now/1000;
   const bool usb=bool(Serial);
   const bool isOnline=online();
-  const bool buttonReleased=(digitalRead(PIN_BUTTON1)!=LOW);
+  const bool buttonReleased=(NRF_P1->IN & (1UL<<10))!=0; // direct hardware GPIO read
 
   if(force || !screenInitialised) {
     tft.fillScreen(ST77XX_BLACK);
     font.setFont(u8g2_font_7x13_t_cyrillic);
     lineAt(5,13,"СТРЕЛА",ST77XX_CYAN);
-    lineAt(175,13,"v1.0",ST77XX_WHITE);
+    lineAt(175,13,"v1.1",ST77XX_WHITE);
     tft.drawFastHLine(0,18,240,ST77XX_BLUE);
     screenInitialised=true;
     screenDirty=true;
@@ -302,22 +309,37 @@ static void beginTest() {
   setStatus("НОВЫЙ ТЕСТ");
   Serial.print("TEST START #");Serial.println(testSeq);
 }
-static void pollButton() {
-  bool raw=digitalRead(PIN_BUTTON1)!=LOW;
+static void triggerUserButton(const char *source) {
   const uint32_t now=millis();
-  if(raw!=buttonLastRaw) {
-    buttonLastRaw=raw;buttonChangedAt=now;
-    screenDirty=true;
-    Serial.print("GPIO42=");Serial.println(raw?1:0);
+  // First edge or polling transition wins. Ignore subsequent contact bounce.
+  if(uint32_t(now-buttonActionAt)<200) return;
+  buttonActionAt=now;
+  ++buttonPressCount;
+  screenDirty=true;
+  Serial.print("BUTTON ");Serial.print(source);
+  Serial.print(" #");Serial.println(buttonPressCount);
+  if(safeMode) setStatus("КНОПКА РАБОТАЕТ");
+  else beginTest();
+}
+static void pollButton() {
+  // Hardware interrupt latches short presses even if LoRa IRQ handling is slow.
+  const uint32_t edges=buttonFallingEdges;
+  if(edges!=buttonEdgesObserved) {
+    buttonEdgesObserved=edges;
+    triggerUserButton("IRQ");
   }
-  if(raw!=buttonStable && uint32_t(now-buttonChangedAt)>45) {
-    buttonStable=raw;
-    if(!buttonStable) {
-      ++buttonPressCount;
-      Serial.print("BUTTON PRESSED #");Serial.println(buttonPressCount);
-      if(safeMode) {setStatus("КНОПКА РАБОТАЕТ");}
-      else beginTest();
-    }
+  // Independent polling fallback + direct P1.10 hardware-level diagnostics.
+  const bool released=(NRF_P1->IN & (1UL<<10))!=0;
+  const uint32_t now=millis();
+  if(released!=buttonLastRaw) {
+    buttonLastRaw=released;
+    buttonChangedAt=now;
+    screenDirty=true;
+    Serial.print("GPIO P1.10: ");Serial.println(released?"HIGH":"LOW");
+  }
+  if(released!=buttonStable && uint32_t(now-buttonChangedAt)>35) {
+    buttonStable=released;
+    if(!buttonStable)triggerUserButton("POLL");
   }
 }
 static void finishSerialLine() {
@@ -331,7 +353,7 @@ static void finishSerialLine() {
       if(safeMode)setStatus("БЕЗ РАДИО - ТЕСТ");
       else beginTest();
     } else if(serialLength==1&&serialBuffer[0]=='?') {
-      Serial.print("STRELA v1.0 NODE=");Serial.print(myId,HEX);
+      Serial.print("STRELA v1.1 NODE=");Serial.print(myId,HEX);
       Serial.print(" NODES=");Serial.println(responderCount);
     } else if(textPending) {
       Serial.println("BUSY");
@@ -360,7 +382,7 @@ static void bootStep(uint8_t number, const char *step) {
   tft.fillScreen(ST77XX_BLUE);
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
-  tft.setCursor(7,5); tft.print("STRELA v1.0");
+  tft.setCursor(7,5); tft.print("STRELA v1.1");
   tft.setTextSize(2);
   tft.setCursor(7,39); tft.print("RADIO STEP:");
   tft.setTextSize(3);
@@ -375,16 +397,20 @@ void setup() {
   // Hold USER while powering on to start safe UI/USB/LED/button diagnostics.
   pinMode(PIN_LED1,OUTPUT);
   digitalWrite(PIN_LED1,LED_STATE_ON);
-  pinMode(PIN_BUTTON1,INPUT); // Official Heltec factory test uses GPIO42 INPUT
+  pinMode(PIN_BUTTON1,INPUT_PULLUP); // GPIO42 = nRF52840 P1.10, active LOW
   delay(40);
   safeMode=(digitalRead(PIN_BUTTON1)==LOW);
   Serial.begin(115200);
-  Serial.println("STRELA v1.0 START");
+  Serial.println("STRELA v1.1 START");
   startScreen();
   myId=1;
   buttonLastRaw=(digitalRead(PIN_BUTTON1)!=LOW);
   buttonStable=buttonLastRaw;
   buttonChangedAt=millis();
+  buttonActionAt=millis()-1000;
+  // Latch short edges, no dependence on duration of Radio.IrqProcess.
+  attachInterrupt(digitalPinToInterrupt(PIN_BUTTON1),onUserButtonInterrupt,FALLING);
+  Serial.print("BUTTON P1.10 INITIAL ");Serial.println(buttonLastRaw?"HIGH":"LOW");
   if(safeMode) {
     setStatus("БЕЗ РАДИО - ТЕСТ");
     Serial.println("SAFE MODE: HELTEC AND LORA ARE NOT INITIALISED");
@@ -427,7 +453,7 @@ void setup() {
   radioReady=true;
   setStatus("ГОТОВО. НАЖМИ КНОПКУ");
   drawScreen(true);
-  Serial.println("STRELA v1.0 MAIN LOOP READY");
+  Serial.println("STRELA v1.1 MAIN LOOP READY");
   digitalWrite(PIN_LED1,!LED_STATE_ON);
 }
 void loop() {
