@@ -1,4 +1,4 @@
-// СТРЕЛА v1.1: Heltec Mesh Node T114 (HT-n5262), nRF52840, SX1262
+// СТРЕЛА v1.2: Heltec Mesh Node T114 (HT-n5262), nRF52840, SX1262
 // Тестовый USB CDC -> LoRa P2P мост, без шифрования, GPS и ретрансляции.
 // Кнопка USER (PIN_BUTTON1): новый опрос сети с нулевым счётчиком.
 // СЧЁТЧИК УЗЛОВ = уникальные ID, ответившие на текущий тестовый пакет.
@@ -69,16 +69,12 @@ static bool ledLit=false;
 static uint32_t ledOffAt=0;
 static bool buttonLastRaw=true,buttonStable=true;
 static uint32_t buttonChangedAt=0;
-static bool safeMode=false;
+static bool safeMode=true; // Start UI + button diagnostics with radio entirely disabled
 static bool radioReady=false;
+static bool radioStartRequested=false;
 static uint32_t buttonPressCount=0;
-static volatile uint32_t buttonFallingEdges=0;
-static uint32_t buttonEdgesObserved=0;
-static uint32_t buttonActionAt=0;
-// GPIO P1.10 is Arduino pin 42 on both Heltec T114 variants.
-static void onUserButtonInterrupt() {
-  ++buttonFallingEdges; // no drawing, radio or USB calls in an interrupt
-}
+static uint32_t buttonPressedAt=0;
+static bool buttonLongHandled=false;
 static bool lastDataValid=false;
 static uint32_t lastDataFrom=0;
 static uint16_t lastDataSeq=0;
@@ -128,7 +124,7 @@ static void startScreen() {
   font.print("СТРЕЛА");
   font.setFont(u8g2_font_7x13_t_cyrillic);
   font.setCursor(12,82);
-  font.print("ЗАГРУЗКА v1.1");
+  font.print("ЗАГРУЗКА v1.2");
   digitalWrite(PIN_TFT_LEDA_CTL,TFT_LEDA_ENABLE);
   delay(400);
 }
@@ -147,7 +143,7 @@ static void drawScreen(bool force=false) {
     tft.fillScreen(ST77XX_BLACK);
     font.setFont(u8g2_font_7x13_t_cyrillic);
     lineAt(5,13,"СТРЕЛА",ST77XX_CYAN);
-    lineAt(175,13,"v1.1",ST77XX_WHITE);
+    lineAt(175,13,"v1.2",ST77XX_WHITE);
     tft.drawFastHLine(0,18,240,ST77XX_BLUE);
     screenInitialised=true;
     screenDirty=true;
@@ -173,7 +169,7 @@ static void drawScreen(bool force=false) {
     font.setCursor(5,61);font.print("УЗЛОВ: ");font.print(responderCount);
     font.setCursor(115,61);font.print("TX:");font.print(txPackets);
     font.print(" RX:");font.print(rxPackets);
-    lineAt(5,77,"ЧАСТОТА: 868.100 МГц",ST77XX_YELLOW);
+    lineAt(5,77,radioReady?"ЧАСТОТА: 868.100 МГц":"ДОЛГО ДЕРЖИ: РАДИО",ST77XX_YELLOW);
     lineAt(5,93,statusText,ST77XX_WHITE);
     font.setForegroundColor(ST77XX_CYAN);
     font.setCursor(5,108);font.print("USB:");font.print(usb?"ДА":"НЕТ");
@@ -309,37 +305,39 @@ static void beginTest() {
   setStatus("НОВЫЙ ТЕСТ");
   Serial.print("TEST START #");Serial.println(testSeq);
 }
-static void triggerUserButton(const char *source) {
-  const uint32_t now=millis();
-  // First edge or polling transition wins. Ignore subsequent contact bounce.
-  if(uint32_t(now-buttonActionAt)<200) return;
-  buttonActionAt=now;
-  ++buttonPressCount;
-  screenDirty=true;
-  Serial.print("BUTTON ");Serial.print(source);
-  Serial.print(" #");Serial.println(buttonPressCount);
-  if(safeMode) setStatus("КНОПКА РАБОТАЕТ");
-  else beginTest();
-}
 static void pollButton() {
-  // Hardware interrupt latches short presses even if LoRa IRQ handling is slow.
-  const uint32_t edges=buttonFallingEdges;
-  if(edges!=buttonEdgesObserved) {
-    buttonEdgesObserved=edges;
-    triggerUserButton("IRQ");
-  }
-  // Independent polling fallback + direct P1.10 hardware-level diagnostics.
-  const bool released=(NRF_P1->IN & (1UL<<10))!=0;
+  // No USER interrupt: Heltec's LoRa driver also relies on GPIO interrupts.
+  // This polls the physical nRF52840 P1.10 register every loop iteration.
   const uint32_t now=millis();
+  const bool released=(NRF_P1->IN & (1UL<<10))!=0;
   if(released!=buttonLastRaw) {
     buttonLastRaw=released;
     buttonChangedAt=now;
     screenDirty=true;
-    Serial.print("GPIO P1.10: ");Serial.println(released?"HIGH":"LOW");
+    Serial.print("GPIO42: ");Serial.println(released?"HIGH":"LOW");
   }
-  if(released!=buttonStable && uint32_t(now-buttonChangedAt)>35) {
+  if(released!=buttonStable && uint32_t(now-buttonChangedAt)>=35) {
     buttonStable=released;
-    if(!buttonStable)triggerUserButton("POLL");
+    if(!released) {
+      buttonPressedAt=now;
+      buttonLongHandled=false;
+    } else if(!buttonLongHandled) {
+      // Short press is counted on release so it cannot also start the radio.
+      ++buttonPressCount; screenDirty=true;
+      Serial.print("BUTTON SHORT #");Serial.println(buttonPressCount);
+      if(radioReady) beginTest();
+      else setStatus("КНОПКА РАБОТАЕТ");
+    }
+  }
+  if(!buttonStable && !buttonLongHandled &&
+     uint32_t(now-buttonPressedAt)>=1500) {
+    buttonLongHandled=true;
+    ++buttonPressCount; screenDirty=true;
+    Serial.println("BUTTON LONG: start radio");
+    if(!radioReady) {
+      radioStartRequested=true;
+      setStatus("ВКЛЮЧАЕМ РАДИО");
+    } else setStatus("РАДИО УЖЕ ВКЛЮЧЕНО");
   }
 }
 static void finishSerialLine() {
@@ -347,13 +345,22 @@ static void finishSerialLine() {
     Serial.println("ERR too long (64 bytes max)");
     setStatus("СЛИШКОМ ДЛИННО");
   } else if(serialLength) {
-    if(serialLength==1&&serialBuffer[0]=='!') {
-      ++buttonPressCount;
-      Serial.println("USB TEST TRIGGER");
-      if(safeMode)setStatus("БЕЗ РАДИО - ТЕСТ");
-      else beginTest();
+    if(serialLength==1&&serialBuffer[0]=='R') {
+      if(!radioReady) {
+        radioStartRequested=true;
+        setStatus("ВКЛЮЧАЕМ РАДИО");
+        Serial.println("USB RADIO START");
+      } else Serial.println("RADIO ALREADY ON");
+    } else if(serialLength==1&&serialBuffer[0]=='!') {
+      if(radioReady)beginTest();
+      else {
+        ++buttonPressCount;
+        screenDirty=true;
+        setStatus("КНОПКА РАБОТАЕТ");
+        Serial.println("BUTTON SIMULATED; RADIO OFF");
+      }
     } else if(serialLength==1&&serialBuffer[0]=='?') {
-      Serial.print("STRELA v1.1 NODE=");Serial.print(myId,HEX);
+      Serial.print("STRELA v1.2 NODE=");Serial.print(myId,HEX);
       Serial.print(" NODES=");Serial.println(responderCount);
     } else if(textPending) {
       Serial.println("BUSY");
@@ -382,7 +389,7 @@ static void bootStep(uint8_t number, const char *step) {
   tft.fillScreen(ST77XX_BLUE);
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
-  tft.setCursor(7,5); tft.print("STRELA v1.1");
+  tft.setCursor(7,5); tft.print("STRELA v1.2");
   tft.setTextSize(2);
   tft.setCursor(7,39); tft.print("RADIO STEP:");
   tft.setTextSize(3);
@@ -393,42 +400,19 @@ static void bootStep(uint8_t number, const char *step) {
   Serial.print(" ");Serial.println(step);
 }
 
-void setup() {
-  // Hold USER while powering on to start safe UI/USB/LED/button diagnostics.
-  pinMode(PIN_LED1,OUTPUT);
-  digitalWrite(PIN_LED1,LED_STATE_ON);
-  pinMode(PIN_BUTTON1,INPUT_PULLUP); // GPIO42 = nRF52840 P1.10, active LOW
-  delay(40);
-  safeMode=(digitalRead(PIN_BUTTON1)==LOW);
-  Serial.begin(115200);
-  Serial.println("STRELA v1.1 START");
-  startScreen();
-  myId=1;
-  buttonLastRaw=(digitalRead(PIN_BUTTON1)!=LOW);
-  buttonStable=buttonLastRaw;
-  buttonChangedAt=millis();
-  buttonActionAt=millis()-1000;
-  // Latch short edges, no dependence on duration of Radio.IrqProcess.
-  attachInterrupt(digitalPinToInterrupt(PIN_BUTTON1),onUserButtonInterrupt,FALLING);
-  Serial.print("BUTTON P1.10 INITIAL ");Serial.println(buttonLastRaw?"HIGH":"LOW");
-  if(safeMode) {
-    setStatus("БЕЗ РАДИО - ТЕСТ");
-    Serial.println("SAFE MODE: HELTEC AND LORA ARE NOT INITIALISED");
-    digitalWrite(PIN_LED1,!LED_STATE_ON);
-    drawScreen(true);
-    return;
-  }
-
-  // No vendor boardInit: v0.8 reproducibly stalled inside it.
-  bootStep(1,"boardInit SKIPPED");
+static void startRadio() {
+  // At boot no vendor radio routines run. We deliberately enable them only
+  // after a long press or the 'R' command so freezing can be localised.
+  safeMode=false;
+  setStatus("НАСТРОЙКА РАДИО");
+  bootStep(1,"boardInit skipped");
   pinMode(PIN_TFT_VDD_CTL,OUTPUT);
   digitalWrite(PIN_TFT_VDD_CTL,TFT_VDD_ENABLE);
   pinMode(PIN_TFT_LEDA_CTL,OUTPUT);
   digitalWrite(PIN_TFT_LEDA_CTL,TFT_LEDA_ENABLE);
   bootStep(2,"Before rtc_timer_init");
   rtc_timer_init();
-  bootStep(3,"RTC initialized");
-  // Read nRF52840 hardware identifier directly without vendor getID().
+  bootStep(3,"RTC initialised");
   myId=NRF_FICR->DEVICEID[0]^NRF_FICR->DEVICEID[1];
   if(myId==0)myId=1;
   sequence=uint16_t(myId>>16);
@@ -438,7 +422,6 @@ void setup() {
   events.RxDone=onRxDone;
   events.RxTimeout=onRxTimeout;
   events.RxError=onRxError;
-
   bootStep(4,"Before Radio.Init");
   Radio.Init(&events);
   bootStep(5,"Before SetChannel");
@@ -451,10 +434,29 @@ void setup() {
   enterRx();
   bootStep(9,"Radio setup finished");
   radioReady=true;
-  setStatus("ГОТОВО. НАЖМИ КНОПКУ");
+  setStatus("РАДИО ГОТОВО");
+  screenInitialised=false; // Restore original UI after boot-step screen
   drawScreen(true);
-  Serial.println("STRELA v1.1 MAIN LOOP READY");
+  Serial.println("STRELA v1.2 RADIO READY");
+}
+
+void setup() {
+  pinMode(PIN_LED1,OUTPUT);
   digitalWrite(PIN_LED1,!LED_STATE_ON);
+  pinMode(PIN_BUTTON1,INPUT_PULLUP); // nRF52 P1.10 / Arduino pin 42, active LOW
+  Serial.begin(115200);
+  Serial.println("STRELA v1.2 DIAGNOSTIC BOOT: RADIO OFF");
+  startScreen();
+  buttonLastRaw=(NRF_P1->IN & (1UL<<10))!=0;
+  buttonStable=buttonLastRaw;
+  buttonChangedAt=millis();
+  buttonPressedAt=millis();
+  buttonLongHandled=false;
+  safeMode=true;
+  radioReady=false;
+  setStatus("КОРОТКО: КНОПКА");
+  drawScreen(true);
+  Serial.println("SHORT=BUTTON TEST, LONG=RADIO ON, USB R=RADIO ON");
 }
 void loop() {
   const uint32_t now=millis();
@@ -470,7 +472,11 @@ void loop() {
     else setStatus("НЕТ ОТВЕТА");
   }
   drawScreen();
-  if(safeMode) return;
+  if(radioStartRequested && !radioReady) {
+    radioStartRequested=false;
+    startRadio();
+    return;
+  }
   if(!radioReady) return;
   Radio.IrqProcess();
   if(radioBusy)return;
